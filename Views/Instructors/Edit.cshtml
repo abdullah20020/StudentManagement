@@ -1,0 +1,16 @@
+@model Instructor
+@{
+    ViewData["Title"] = T("Edit instructor");
+}
+
+<div class="page-head"><h2>@T("Edit instructor")</h2></div>
+<form asp-action="Edit" asp-route-id="@Model.Id" method="post" class="form-card">
+    <input type="hidden" asp-for="Id" />
+    <partial name="_InstructorForm" model="Model" />
+    <div class="mt-4 d-flex gap-2">
+        <button class="btn btn-primary"><i class="bi bi-check2"></i> @T("Save changes")</button>
+        <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary">@T("Cancel")</a>
+    </div>
+</form>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

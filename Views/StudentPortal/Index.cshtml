@@ -1,0 +1,152 @@
+@model Student
+@{
+    ViewData["Title"] = T("My dashboard");
+    var term = ViewBag.Term as AcademicTerm;
+    var regs = (List<Registration>)ViewBag.Registrations;
+    var attendance = (List<Attendance>)ViewBag.Attendance;
+    var transcript = (List<TermRecord>)ViewBag.Transcript;
+    var last = transcript.LastOrDefault();
+    var cgpa = last?.Cgpa;
+    var earned = last?.EarnedCredits ?? 0;
+    var latestFee = Model.FeePayments.OrderByDescending(f => f.PaidOn).ThenByDescending(f => f.Id).FirstOrDefault();
+}
+
+<div class="card mb-4 border-0 text-white" style="background:linear-gradient(120deg,var(--uni-700),var(--uni-900))">
+    <div class="card-body p-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div>
+            <div class="small opacity-75">@T("Welcome back,")</div>
+            <h2 class="text-white mb-1">@Model.FullName</h2>
+            <div class="opacity-75">@Model.AdmissionNumber · @Model.Course?.Name · @Model.Course?.Department?.Faculty?.Name</div>
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-controller="Registration" asp-action="Index" class="btn btn-gold"><i class="bi bi-journal-plus"></i> @T("Course registration")</a>
+            <a asp-controller="Transcript" asp-action="Index" class="btn btn-outline-light"><i class="bi bi-file-earmark-text"></i> @T("Transcript")</a>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-lg-3"><div class="card h-100"><div class="card-body stat">
+        <div class="icon"><i class="bi bi-graph-up"></i></div>
+        <div>
+            <div class="label">@T("CGPA")</div>
+            <div class="value">@(cgpa?.ToString("0.00") ?? "—")</div>
+            <span class="badge @Academic.StandingBadge(cgpa)">@T(Academic.Standing(cgpa))</span>
+        </div>
+    </div></div></div>
+    <div class="col-sm-6 col-lg-3"><div class="card h-100"><div class="card-body stat">
+        <div class="icon gold"><i class="bi bi-award"></i></div>
+        <div class="flex-grow-1">
+            <div class="label">@T("Credits earned")</div>
+            <div class="value">@earned <span class="fs-6 text-muted">/ @Model.Course?.Credits</span></div>
+            <div class="progress" style="height:6px">
+                <div class="progress-bar" style="width:@(Model.Course?.Credits > 0 ? Math.Min(100, earned * 100 / Model.Course.Credits) : 0)%"></div>
+            </div>
+            <div class="small text-muted mt-1">@T("Level {0}", Academic.Level(earned))</div>
+        </div>
+    </div></div></div>
+    <div class="col-sm-6 col-lg-3"><div class="card h-100"><div class="card-body stat">
+        <div class="icon blue"><i class="bi bi-calendar3"></i></div>
+        <div>
+            <div class="label">@term?.Name</div>
+            <div class="value">@regs.Sum(r => r.Section!.Subject!.Credits) <span class="fs-6 text-muted">@T("credit hours")</span></div>
+            <a asp-controller="Registration" asp-action="Index" class="small">
+                @(term?.RegistrationOpen == true ? T("Registration is open – add or drop") : T("View registration")) @Arrow
+            </a>
+        </div>
+    </div></div></div>
+    <div class="col-sm-6 col-lg-3"><div class="card h-100"><div class="card-body stat">
+        <div class="icon red"><i class="bi bi-cash-coin"></i></div>
+        <div>
+            <div class="label">@T("Fee balance")</div>
+            <div class="value @(latestFee?.Balance > 0 ? "text-danger" : "text-success")">@(latestFee?.Balance.ToString("N0") ?? "0") <span class="fs-6">@T("EGP")</span></div>
+            <div class="small text-muted">@(latestFee != null ? T("Last paid {0}", Date(latestFee.PaidOn)) : T("No payments yet"))</div>
+        </div>
+    </div></div></div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header"><i class="bi bi-journal-check"></i> @T("My courses") · @term?.Name</div>
+    @if (regs.Any())
+    {
+        <table class="table table-sm align-middle">
+            <thead><tr><th>@T("Section")</th><th>@T("Subject")</th><th class="text-end">@T("Cr.")</th><th>@T("Instructor")</th><th class="text-end">@T("Attendance")</th></tr></thead>
+            <tbody>
+                @foreach (var r in regs.OrderBy(r => r.Section!.Subject!.Code))
+                {
+                    var sec = r.Section!;
+                    var subj = sec.Subject!;
+                    var mine = attendance.Where(a => a.SubjectId == sec.SubjectId).ToList();
+                    var rate = Attendance.Rate(mine.Count(a => a.Status == "Present"), mine.Count(a => a.Status == "Late"), mine.Count(a => a.Status == "Absent"));
+                    <tr>
+                        <td><strong>@subj.Code-@sec.Number</strong></td>
+                        <td>@subj.Name</td>
+                        <td class="text-end">@subj.Credits</td>
+                        <td class="small">@(sec.Instructor?.FullName ?? T("TBA"))</td>
+                        <td class="text-end @(rate < 75 ? "text-danger fw-bold" : "")">@(rate.HasValue ? rate.Value.ToString("0.#") + "%" : "—")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <div class="card-body text-muted">
+            @T("You aren't registered in any course this term.")
+            <a asp-controller="Registration" asp-action="Index">@T("Go to course registration")</a>.
+        </div>
+    }
+</div>
+
+<div class="card mb-3">
+    <div class="card-header"><i class="bi bi-calendar-week"></i> @T("Weekly timetable")</div>
+    <div class="card-body p-2"><partial name="_Timetable" model="(List<TimetableEntry>)ViewBag.Timetable" /></div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between">
+                <span><i class="bi bi-bar-chart-line"></i> @T("Results by term")</span>
+                <a asp-controller="Transcript" asp-action="Index" class="small fw-normal">@T("Full transcript") @Arrow</a>
+            </div>
+            @if (transcript.Any())
+            {
+                <table class="table table-sm">
+                    <thead><tr><th>@T("Term")</th><th class="text-end">@T("Credits")</th><th class="text-end">@T("Term GPA")</th><th class="text-end">@T("CGPA")</th></tr></thead>
+                    <tbody>
+                        @foreach (var t in transcript)
+                        {
+                            <tr><td>@t.Term.Name</td><td class="text-end">@t.TermCredits</td><td class="text-end">@t.TermGpa?.ToString("0.00")</td><td class="text-end"><strong>@t.Cgpa?.ToString("0.00")</strong></td></tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <div class="card-body text-muted">@T("No grades yet.")</div>
+            }
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header"><i class="bi bi-receipt"></i> @T("Fee payments")</div>
+            @if (Model.FeePayments.Any())
+            {
+                <table class="table table-sm">
+                    <thead><tr><th>@T("Receipt")</th><th>@T("Term")</th><th class="text-end">@T("Paid")</th><th class="text-end">@T("Balance")</th></tr></thead>
+                    <tbody>
+                        @foreach (var f in Model.FeePayments.OrderByDescending(f => f.PaidOn))
+                        {
+                            <tr><td><code>@f.ReceiptNumber</code></td><td>@T(f.Term) @f.Year</td><td class="text-end">@f.Amount.ToString("N0")</td><td class="text-end">@f.Balance.ToString("N0")</td></tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <div class="card-body text-muted">@T("No payments recorded.")</div>
+            }
+        </div>
+    </div>
+</div>

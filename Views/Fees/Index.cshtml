@@ -1,0 +1,117 @@
+@model IEnumerable<FeePayment>
+@using StudentManagement.ViewModels
+@{
+    ViewData["Title"] = T("Fees");
+    var list = Model.ToList();
+    var returnUrl = Context.Request.Path + Context.Request.QueryString;
+}
+
+<div class="page-head">
+    <div>
+        <h2>@T("Fee payments") @if (ViewBag.StudentName != null) { <small class="text-muted fs-5">— @ViewBag.StudentName</small> }</h2>
+        <div class="sub">@T("Receipts issued by the bursar's office.")</div>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="Outstanding" class="btn btn-outline-danger"><i class="bi bi-exclamation-circle"></i> @T("Outstanding balances")</a>
+        <a asp-action="Create" asp-route-studentId="@ViewBag.StudentId" class="btn btn-primary"><i class="bi bi-plus-lg"></i> @T("Record payment")</a>
+    </div>
+</div>
+
+<form method="get" class="filter-bar row g-2">
+    @if (ViewBag.StudentId != null)
+    {
+        <input type="hidden" name="studentId" value="@ViewBag.StudentId" />
+    }
+    <div class="col-md-4">
+        <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <input name="search" value="@ViewBag.Search" class="form-control" placeholder="@T("Receipt, reference, student...")" />
+        </div>
+    </div>
+    <div class="col-md-2">
+        <select name="term" class="form-select">
+            <option value="">@T("All terms")</option>
+            @foreach (var t in FeePaymentViewModel.Terms)
+            {
+                <option value="@t" selected="@(ViewBag.Term == t)">@T(t)</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-2">
+        <select name="year" class="form-select">
+            <option value="">@T("All years")</option>
+            @foreach (int y in ViewBag.Years)
+            {
+                <option value="@y" selected="@(ViewBag.Year == y)">@y</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-2">
+        <select name="method" class="form-select">
+            <option value="">@T("All methods")</option>
+            @foreach (var m in FeePaymentViewModel.Methods)
+            {
+                <option value="@m" selected="@(ViewBag.Method == m)">@T(m)</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-2 d-flex gap-2">
+        <button class="btn btn-secondary flex-grow-1">@T("Filter")</button>
+        <a asp-action="Index" class="btn btn-outline-secondary">@T("Reset")</a>
+    </div>
+</form>
+
+@if (list.Any())
+{
+    <div class="row g-3 mb-3">
+        <div class="col-sm-4"><div class="card"><div class="card-body stat">
+            <div class="icon"><i class="bi bi-receipt"></i></div>
+            <div><div class="label">@T("Payments")</div><div class="value">@list.Count</div></div>
+        </div></div></div>
+        <div class="col-sm-4"><div class="card"><div class="card-body stat">
+            <div class="icon gold"><i class="bi bi-cash-stack"></i></div>
+            <div><div class="label">@T("Total collected")</div><div class="value">@list.Sum(f => f.Amount).ToString("N0") <span class="fs-6">@T("EGP")</span></div></div>
+        </div></div></div>
+        <div class="col-sm-4"><div class="card"><div class="card-body stat">
+            <div class="icon blue"><i class="bi bi-calculator"></i></div>
+            <div><div class="label">@T("Average payment")</div><div class="value">@list.Average(f => f.Amount).ToString("N0") <span class="fs-6">@T("EGP")</span></div></div>
+        </div></div></div>
+    </div>
+
+    <div class="table-wrap">
+        <table class="table table-hover table-sm align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>@T("Receipt")</th><th>@T("Student")</th><th>@T("Term")</th><th>@T("Method")</th><th>@T("Reference")</th><th>@T("Paid on")</th>
+                    <th class="text-end">@T("Amount")</th><th class="text-end">@T("Balance")</th><th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var f in list)
+                {
+                    <tr>
+                        <td><a asp-action="Receipt" asp-route-id="@f.Id"><code>@f.ReceiptNumber</code></a></td>
+                        <td><a asp-controller="Students" asp-action="Details" asp-route-id="@f.StudentId">@f.Student?.FullName</a></td>
+                        <td>@T(f.Term) @f.Year</td>
+                        <td>@T(f.PaymentMethod)</td>
+                        <td class="small" dir="ltr">@f.TransactionReference</td>
+                        <td class="small">@Date(f.PaidOn)</td>
+                        <td class="text-end">@f.Amount.ToString("N2")</td>
+                        <td class="text-end @(f.Balance > 0 ? "text-danger" : "")">@f.Balance.ToString("N2")</td>
+                        <td class="text-end text-nowrap">
+                            <a asp-action="Receipt" asp-route-id="@f.Id" class="btn btn-sm btn-outline-primary" title="@T("Receipt")"><i class="bi bi-printer"></i></a>
+                            <form asp-action="Delete" asp-route-id="@f.Id" asp-route-returnUrl="@returnUrl" method="post" class="d-inline"
+                                  data-confirm="@T("Delete payment {0}?", f.ReceiptNumber)">
+                                <button class="btn btn-sm btn-outline-danger" title="@T("Delete")"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+else
+{
+    <p class="text-muted">@T("No payments match these filters.")</p>
+}

@@ -1,0 +1,79 @@
+@model List<Section>
+@{
+    ViewData["Title"] = T("My sections");
+    var me = (Instructor)ViewBag.Instructor;
+    var term = ViewBag.Term as AcademicTerm;
+    var enrolled = (Dictionary<int, int>)ViewBag.Enrolled;
+}
+
+<div class="card mb-4 border-0 text-white" style="background:linear-gradient(120deg,var(--uni-700),var(--uni-900))">
+    <div class="card-body p-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div>
+            <div class="small opacity-75">@T("Welcome back,")</div>
+            <h2 class="text-white mb-1">@me.FullName</h2>
+            <div class="opacity-75">@me.Department?.Name · @T("Office") @(me.Office ?? "—")</div>
+        </div>
+        <form method="get">
+            <select name="termId" class="form-select" onchange="this.form.submit()">
+                @foreach (AcademicTerm t in ViewBag.Terms)
+                {
+                    <option value="@t.Id" selected="@(term?.Id == t.Id)">@t.Name</option>
+                }
+            </select>
+        </form>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-sm-4"><div class="card h-100"><div class="card-body stat">
+        <div class="icon"><i class="bi bi-easel"></i></div>
+        <div><div class="label">@T("Sections")</div><div class="value">@Model.Count</div></div>
+    </div></div></div>
+    <div class="col-sm-4"><div class="card h-100"><div class="card-body stat">
+        <div class="icon gold"><i class="bi bi-people"></i></div>
+        <div><div class="label">@T("Students")</div><div class="value">@enrolled.Values.Sum()</div></div>
+    </div></div></div>
+    <div class="col-sm-4"><div class="card h-100"><div class="card-body stat">
+        <div class="icon blue"><i class="bi bi-clock"></i></div>
+        <div><div class="label">@T("Weekly classes")</div><div class="value">@Model.Sum(s => s.Meetings.Count)</div></div>
+    </div></div></div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header"><i class="bi bi-easel"></i> @T("My sections") · @term?.Name</div>
+    @if (Model.Any())
+    {
+        <table class="table align-middle">
+            <thead><tr><th>@T("Section")</th><th>@T("Subject")</th><th>@T("Schedule")</th><th class="text-end">@T("Students")</th><th></th></tr></thead>
+            <tbody>
+                @foreach (var s in Model)
+                {
+                    <tr>
+                        <td><strong>@s.Subject?.Code-@s.Number</strong></td>
+                        <td>@s.Subject?.Name</td>
+                        <td class="small">
+                            @foreach (var m in s.Meetings.OrderBy(m => Array.IndexOf(SectionMeeting.TeachingDays, m.Day)).ThenBy(m => m.StartTime))
+                            {
+                                <div>@DayShort(m.Day) <span dir="ltr">@m.TimeRange</span> <span class="text-muted">@m.Room?.Code</span></div>
+                            }
+                        </td>
+                        <td class="text-end">@enrolled.GetValueOrDefault(s.Id)/@s.Capacity</td>
+                        <td class="text-end text-nowrap">
+                            <a asp-action="Section" asp-route-id="@s.Id" class="btn btn-sm btn-primary"><i class="bi bi-award"></i> @T("Roster & grades")</a>
+                            <a asp-controller="Attendance" asp-action="Index" asp-route-sectionId="@s.Id" class="btn btn-sm btn-outline-success"><i class="bi bi-check2-square"></i> @T("Attendance")</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <div class="card-body text-muted">@T("You have no sections in {0}.", term?.Name ?? "")</div>
+    }
+</div>
+
+<div class="card">
+    <div class="card-header"><i class="bi bi-calendar-week"></i> @T("My weekly timetable")</div>
+    <div class="card-body p-2"><partial name="_Timetable" model="(List<TimetableEntry>)ViewBag.Timetable" /></div>
+</div>

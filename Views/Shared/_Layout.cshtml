@@ -1,0 +1,209 @@
+﻿@inject StudentManagement.Services.RegistrationService Registration
+@{
+    var controller = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+    var signedIn = User.Identity?.IsAuthenticated == true;
+    var term = signedIn ? await Registration.CurrentTermAsync() : null;
+    var here = Context.Request.Path + Context.Request.QueryString;
+    var isHome = controller is "Home" or "StudentPortal" or "InstructorPortal";
+    string Active(params string[] names) => names.Contains(controller) ? "active" : "";
+    var role = User.IsInRole("Admin") ? "Administrator" : User.IsInRole("Instructor") ? "Faculty member" : User.IsInRole("Student") ? "Student" : null;
+}
+<!DOCTYPE html>
+<html lang="@Lang" dir="@Dir">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] · @T(UniversityName)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    @if (IsArabic)
+    {
+        <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.rtl.min.css" />
+    }
+    else
+    {
+        <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    }
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/StudentManagement.styles.css" asp-append-version="true" />
+</head>
+<body>
+    <div class="uni-topbar">
+        <div class="container d-flex justify-content-between align-items-center py-1">
+            <div class="d-none d-md-block">
+                <i class="bi bi-geo-alt"></i> @T("Main Campus, Cairo")
+                <span class="sep">|</span><i class="bi bi-telephone"></i> <span dir="ltr">+20 2 1234 5678</span>
+                <span class="sep">|</span><i class="bi bi-envelope"></i> info@university.edu
+            </div>
+            <div class="d-flex align-items-center gap-2 ms-auto">
+                <span class="lang-switch">
+                    <a asp-controller="Language" asp-action="Set" asp-route-lang="en" asp-route-returnUrl="@here" class="@(IsArabic ? "" : "active")">English</a>
+                    <a asp-controller="Language" asp-action="Set" asp-route-lang="ar" asp-route-returnUrl="@here" class="@(IsArabic ? "active" : "")">عربي</a>
+                </span>
+                @if (signedIn)
+                {
+                    <span class="sep">|</span>
+                    <span class="d-none d-sm-inline"><i class="bi bi-person-circle"></i> @User.Identity!.Name</span>
+                    <form asp-controller="Account" asp-action="Logout" method="post" class="m-0 d-inline">
+                        <button class="btn btn-link btn-sm p-0 text-white text-decoration-none ms-2"><i class="bi bi-box-arrow-right"></i> @T("Sign out")</button>
+                    </form>
+                }
+            </div>
+        </div>
+    </div>
+
+    <header class="uni-header">
+        <div class="container d-flex justify-content-between align-items-center py-3">
+            <a class="uni-brand" asp-controller="Home" asp-action="Index">
+                <partial name="_Crest" />
+                <span>
+                    <span class="name d-block">@T(UniversityName)</span>
+                    <span class="tagline">@T("Knowledge · Integrity · Service")</span>
+                </span>
+            </a>
+            @if (signedIn)
+            {
+                <div class="d-none d-md-flex align-items-center gap-2">
+                    @if (role != null) { <span class="badge text-bg-light border">@T(role)</span> }
+                    @if (term != null)
+                    {
+                        <span class="term-pill"><i class="bi bi-calendar3"></i> @T(term.Season) @term.Year
+                            @if (term.RegistrationOpen) { <span class="ms-1 text-success">· @T("Registration open")</span> }
+                        </span>
+                    }
+                </div>
+            }
+        </div>
+    </header>
+
+    @if (signedIn)
+    {
+        <nav class="navbar navbar-expand-lg uni-nav py-0">
+            <div class="container">
+                <button class="navbar-toggler my-2" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="@T("Menu")">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="mainNav">
+                    <ul class="navbar-nav">
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <li class="nav-item"><a class="nav-link @Active("Home")" asp-controller="Home" asp-action="Index"><i class="bi bi-speedometer2"></i> @T("Dashboard")</a></li>
+                            <li class="nav-item"><a class="nav-link @Active("Students", "Registration", "Transcript")" asp-controller="Students" asp-action="Index"><i class="bi bi-mortarboard"></i> @T("Students")</a></li>
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle @Active("Faculties", "Courses", "Instructors", "Terms", "Rooms")" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-bank"></i> @T("Academics")</a>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" asp-controller="Faculties" asp-action="Index"><i class="bi bi-building"></i>@T("Faculties & departments")</a></li>
+                                    <li><a class="dropdown-item" asp-controller="Courses" asp-action="Index"><i class="bi bi-journal-bookmark"></i>@T("Programs & subjects")</a></li>
+                                    <li><a class="dropdown-item" asp-controller="Instructors" asp-action="Index"><i class="bi bi-person-badge"></i>@T("Instructors")</a></li>
+                                    <li><hr class="dropdown-divider" /></li>
+                                    <li><a class="dropdown-item" asp-controller="Terms" asp-action="Index"><i class="bi bi-calendar-range"></i>@T("Academic terms")</a></li>
+                                    <li><a class="dropdown-item" asp-controller="Rooms" asp-action="Index"><i class="bi bi-door-open"></i>@T("Rooms")</a></li>
+                                </ul>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle @Active("Sections", "Grades", "Attendance")" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-easel"></i> @T("Teaching")</a>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" asp-controller="Sections" asp-action="Index"><i class="bi bi-calendar-week"></i>@T("Sections & schedule")</a></li>
+                                    <li><a class="dropdown-item" asp-controller="Grades" asp-action="Index"><i class="bi bi-award"></i>@T("Grades")</a></li>
+                                    <li><a class="dropdown-item" asp-controller="Attendance" asp-action="Index"><i class="bi bi-check2-square"></i>@T("Attendance")</a></li>
+                                    <li><a class="dropdown-item" asp-controller="Attendance" asp-action="Summary"><i class="bi bi-bar-chart"></i>@T("Attendance summary")</a></li>
+                                </ul>
+                            </li>
+                            <li class="nav-item"><a class="nav-link @Active("Fees")" asp-controller="Fees" asp-action="Index"><i class="bi bi-cash-coin"></i> @T("Fees")</a></li>
+                        }
+                        else if (User.IsInRole("Instructor"))
+                        {
+                            <li class="nav-item"><a class="nav-link @Active("InstructorPortal")" asp-controller="InstructorPortal" asp-action="Index"><i class="bi bi-easel"></i> @T("My sections")</a></li>
+                            <li class="nav-item"><a class="nav-link @Active("Attendance")" asp-controller="Attendance" asp-action="Index"><i class="bi bi-check2-square"></i> @T("Attendance")</a></li>
+                        }
+                        else if (User.IsInRole("Student"))
+                        {
+                            <li class="nav-item"><a class="nav-link @Active("StudentPortal")" asp-controller="StudentPortal" asp-action="Index"><i class="bi bi-house"></i> @T("My dashboard")</a></li>
+                            <li class="nav-item"><a class="nav-link @Active("Registration")" asp-controller="Registration" asp-action="Index"><i class="bi bi-journal-plus"></i> @T("Course registration")</a></li>
+                            <li class="nav-item"><a class="nav-link @Active("Transcript")" asp-controller="Transcript" asp-action="Index"><i class="bi bi-file-earmark-text"></i> @T("Transcript")</a></li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        </nav>
+
+        @if (!isHome)
+        {
+            <div class="uni-crumbs">
+                <div class="container">
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index"><i class="bi bi-house-door"></i> @T("Home")</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">@ViewData["Title"]</li>
+                        </ol>
+                    </nav>
+                </div>
+            </div>
+        }
+    }
+
+    <main role="main" class="container py-4">
+        <partial name="_Alerts" />
+        @RenderBody()
+    </main>
+
+    <footer class="uni-footer">
+        <div class="container py-5">
+            <div class="row g-4">
+                <div class="col-lg-5">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <partial name="_Crest" />
+                        <strong class="fs-5 text-white">@T(UniversityName)</strong>
+                    </div>
+                    <div class="gold-line"></div>
+                    <p class="mb-0">@T("A public university committed to excellence in teaching, research and community service since 1965.")</p>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <h6>@T("Quick links")</h6>
+                    <ul>
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <li><a asp-controller="Students" asp-action="Index">@T("Students")</a></li>
+                            <li><a asp-controller="Sections" asp-action="Index">@T("Sections & schedule")</a></li>
+                            <li><a asp-controller="Terms" asp-action="Index">@T("Academic terms")</a></li>
+                        }
+                        else if (User.IsInRole("Instructor"))
+                        {
+                            <li><a asp-controller="InstructorPortal" asp-action="Index">@T("My sections")</a></li>
+                            <li><a asp-controller="Attendance" asp-action="Index">@T("Attendance")</a></li>
+                        }
+                        else if (User.IsInRole("Student"))
+                        {
+                            <li><a asp-controller="Registration" asp-action="Index">@T("Course registration")</a></li>
+                            <li><a asp-controller="Transcript" asp-action="Index">@T("Transcript")</a></li>
+                        }
+                        <li><a asp-controller="Home" asp-action="Privacy">@T("Privacy policy")</a></li>
+                    </ul>
+                </div>
+                <div class="col-sm-6 col-lg-4">
+                    <h6>@T("Contact us")</h6>
+                    <ul>
+                        <li><i class="bi bi-geo-alt me-2"></i>@T("University Street, Nasr City, Cairo, Egypt")</li>
+                        <li><i class="bi bi-telephone me-2"></i><span dir="ltr">+20 2 1234 5678</span></li>
+                        <li><i class="bi bi-envelope me-2"></i>info@university.edu</li>
+                        <li><i class="bi bi-clock me-2"></i>@T("Sunday–Thursday, 9:00–16:00")</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="bottom">
+            <div class="container py-3 d-flex flex-wrap justify-content-between gap-2">
+                <span>© @DateTime.Today.Year @T(UniversityName). @T("All rights reserved.")</span>
+                <span>@T("Student Information System")</span>
+            </div>
+        </div>
+    </footer>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

@@ -1,0 +1,144 @@
+@model Section
+@{
+    ViewData["Title"] = $"{Model.Subject?.Code}-{Model.Number}";
+    var rooms = (List<Room>)ViewBag.Rooms;
+    var candidates = (List<SelectListItem>)ViewBag.Candidates;
+    var regs = Model.Registrations.OrderBy(r => r.Student?.LastName).ThenBy(r => r.Student?.FirstName).ToList();
+}
+
+<div class="page-head">
+    <div>
+        <h2>@Model.Subject?.Code-@Model.Number · @Model.Subject?.Name</h2>
+        <div class="sub">
+            @Model.Term?.Name · @Model.Subject?.Course?.Name · @T("{0} credit hours", Model.Subject?.Credits ?? 0) ·
+            @(Model.Instructor?.FullName ?? T("No instructor"))
+        </div>
+        @if (Model.Subject!.Prerequisites.Any())
+        {
+            <div class="small mt-1">@T("Prerequisites"):
+                @foreach (var p in Model.Subject.Prerequisites) { <code class="me-1">@p.Prerequisite?.Code</code> }
+            </div>
+        }
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary"><i class="bi bi-pencil"></i> @T("Edit")</a>
+        <form asp-action="Delete" asp-route-id="@Model.Id" method="post" data-confirm="@T("Delete this section?")">
+            <button class="btn btn-outline-danger"><i class="bi bi-trash"></i> @T("Delete")</button>
+        </form>
+        <a asp-action="Index" asp-route-termId="@Model.TermId" class="btn btn-outline-secondary">@T("Back")</a>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header"><i class="bi bi-clock"></i> @T("Weekly meetings")</div>
+            @if (Model.Meetings.Any())
+            {
+                <table class="table table-sm align-middle">
+                    <tbody>
+                        @foreach (var m in Model.Meetings.OrderBy(m => Array.IndexOf(SectionMeeting.TeachingDays, m.Day)).ThenBy(m => m.StartTime))
+                        {
+                            <tr>
+                                <td>@Day(m.Day)</td>
+                                <td dir="ltr" class="text-start">@m.TimeRange</td>
+                                <td>@(m.Room?.Code ?? T("No room"))</td>
+                                <td class="text-muted">@T(m.Type)</td>
+                                <td class="text-end">
+                                    <form asp-action="DeleteMeeting" asp-route-id="@m.Id" method="post" data-confirm="@T("Remove this meeting?")">
+                                        <button class="btn btn-sm btn-outline-danger" title="@T("Remove")"><i class="bi bi-x-lg"></i></button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <div class="card-body text-muted">@T("No meetings yet. Students can't see a time for this section until you add one.")</div>
+            }
+            <div class="card-footer">
+                <form asp-action="AddMeeting" asp-route-id="@Model.Id" method="post" class="row g-2 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label small mb-1">@T("Day")</label>
+                        <select name="day" class="form-select form-select-sm">
+                            @foreach (var d in SectionMeeting.TeachingDays) { <option value="@((int)d)">@Day(d)</option> }
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small mb-1">@T("From")</label>
+                        <input name="startTime" type="time" value="09:00" class="form-control form-control-sm" required />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small mb-1">@T("To")</label>
+                        <input name="endTime" type="time" value="10:30" class="form-control form-control-sm" required />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small mb-1">@T("Room")</label>
+                        <select name="roomId" class="form-select form-select-sm">
+                            <option value="">—</option>
+                            @foreach (var r in rooms) { <option value="@r.Id">@r.Code (@r.Capacity)</option> }
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small mb-1">@T("Type")</label>
+                        <select name="type" class="form-select form-select-sm">
+                            @foreach (var t in SectionMeeting.Types) { <option value="@t">@T(t)</option> }
+                        </select>
+                    </div>
+                    <div class="col-md-1"><button class="btn btn-sm btn-success w-100" title="@T("Add")"><i class="bi bi-plus-lg"></i></button></div>
+                </form>
+                <div class="form-text">@T("Room and instructor double-bookings and room capacity are checked.")</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between">
+                <span><i class="bi bi-people"></i> @T("Registered students")</span>
+                <span class="@(regs.Count >= Model.Capacity ? "text-danger" : "")">@regs.Count / @Model.Capacity</span>
+            </div>
+            @if (regs.Any())
+            {
+                <table class="table table-sm align-middle">
+                    <tbody>
+                        @foreach (var r in regs)
+                        {
+                            <tr>
+                                <td><a asp-controller="Students" asp-action="Details" asp-route-id="@r.StudentId">@r.Student?.FullName</a></td>
+                                <td><code>@r.Student?.AdmissionNumber</code></td>
+                                <td class="text-end">
+                                    <form asp-action="Drop" asp-route-id="@Model.Id" asp-route-registrationId="@r.Id" method="post"
+                                          data-confirm="@T("Drop this student from the section?")">
+                                        <button class="btn btn-sm btn-outline-danger">@T("Drop")</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <div class="card-body text-muted">@T("Nobody registered yet.")</div>
+            }
+            @if (candidates.Any())
+            {
+                <div class="card-footer">
+                    <form asp-action="Enroll" asp-route-id="@Model.Id" method="post" class="d-flex gap-2">
+                        <select name="studentId" asp-items="candidates" class="form-select form-select-sm"></select>
+                        <button class="btn btn-sm btn-success text-nowrap">@T("Register student")</button>
+                    </form>
+                    <div class="form-text">@T("Prerequisites, credit limit, capacity and time clashes are checked.")</div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header"><i class="bi bi-calendar-week"></i> @T("Timetable")</div>
+    <div class="card-body p-2"><partial name="_Timetable" model="(List<TimetableEntry>)ViewBag.Timetable" /></div>
+</div>

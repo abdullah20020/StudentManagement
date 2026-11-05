@@ -1,0 +1,27 @@
+@model Room
+
+<div asp-validation-summary="ModelOnly" class="text-danger"></div>
+<div class="row g-3">
+    <div class="col-md-3">
+        <label asp-for="Code" class="form-label"></label>
+        <input asp-for="Code" class="form-control" placeholder="B-201" dir="ltr" />
+        <span asp-validation-for="Code" class="text-danger small"></span>
+    </div>
+    <div class="col-md-4">
+        <label asp-for="Building" class="form-label"></label>
+        <input asp-for="Building" class="form-control" />
+        <span asp-validation-for="Building" class="text-danger small"></span>
+    </div>
+    <div class="col-md-3">
+        <label asp-for="Type" class="form-label"></label>
+        <select asp-for="Type" class="form-select">
+            @foreach (var t in Room.Types) { <option value="@t">@T(t)</option> }
+        </select>
+        <span asp-validation-for="Type" class="text-danger small"></span>
+    </div>
+    <div class="col-md-2">
+        <label asp-for="Capacity" class="form-label"></label>
+        <input asp-for="Capacity" type="number" class="form-control" />
+        <span asp-validation-for="Capacity" class="text-danger small"></span>
+    </div>
+</div>

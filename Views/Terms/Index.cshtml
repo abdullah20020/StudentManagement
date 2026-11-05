@@ -1,0 +1,55 @@
+@model List<AcademicTerm>
+@{
+    ViewData["Title"] = T("Academic terms");
+    var grades = (Dictionary<int, int>)ViewBag.GradeCounts;
+}
+
+<div class="page-head">
+    <div>
+        <h2>@T("Academic terms")</h2>
+        <div class="sub">@T("Set the current term and open or close course registration.")</div>
+    </div>
+    <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg"></i> @T("New term")</a>
+</div>
+
+<div class="table-wrap">
+    <table class="table align-middle">
+        <thead class="table-dark">
+            <tr><th>@T("Term")</th><th>@T("Dates")</th><th>@T("Status")</th><th class="text-end">@T("Sections")</th><th class="text-end">@T("Registrations")</th><th class="text-end">@T("Grades")</th><th></th></tr>
+        </thead>
+        <tbody>
+            @foreach (var t in Model)
+            {
+                <tr class="@(t.IsCurrent ? "table-primary" : "")">
+                    <td><strong>@t.Name</strong></td>
+                    <td class="small">@Date(t.StartDate) @Arrow @Date(t.EndDate)</td>
+                    <td>
+                        @if (t.IsCurrent) { <span class="badge bg-primary">@T("Current")</span> }
+                        @if (t.RegistrationOpen) { <span class="badge bg-success">@T("Registration open")</span> }
+                        else { <span class="badge bg-light text-dark border">@T("Registration closed")</span> }
+                    </td>
+                    <td class="text-end"><a asp-controller="Sections" asp-action="Index" asp-route-termId="@t.Id">@t.Sections.Count</a></td>
+                    <td class="text-end">@t.Sections.Sum(s => s.Registrations.Count)</td>
+                    <td class="text-end">@grades.GetValueOrDefault(t.Id)</td>
+                    <td class="text-end text-nowrap">
+                        @if (!t.IsCurrent)
+                        {
+                            <form asp-action="SetCurrent" asp-route-id="@t.Id" method="post" class="d-inline">
+                                <button class="btn btn-sm btn-outline-primary">@T("Make current")</button>
+                            </form>
+                        }
+                        <form asp-action="ToggleRegistration" asp-route-id="@t.Id" method="post" class="d-inline">
+                            <button class="btn btn-sm @(t.RegistrationOpen ? "btn-outline-warning" : "btn-outline-success")">
+                                @(t.RegistrationOpen ? T("Close registration") : T("Open registration"))
+                            </button>
+                        </form>
+                        <a asp-action="Edit" asp-route-id="@t.Id" class="btn btn-sm btn-outline-secondary" title="@T("Edit")"><i class="bi bi-pencil"></i></a>
+                        <form asp-action="Delete" asp-route-id="@t.Id" method="post" class="d-inline" data-confirm="@T("Delete this term?")">
+                            <button class="btn btn-sm btn-outline-danger" title="@T("Delete")"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

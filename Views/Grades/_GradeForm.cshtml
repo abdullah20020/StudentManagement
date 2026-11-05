@@ -1,0 +1,62 @@
+@model StudentManagement.ViewModels.GradeViewModel
+
+<div asp-validation-summary="All" class="alert alert-danger" style="display:@(ViewData.ModelState.IsValid ? "none" : "block")"></div>
+
+<input type="hidden" asp-for="ReturnUrl" />
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <label asp-for="StudentId" class="form-label"></label>
+        <select asp-for="StudentId" asp-items="ViewBag.Students" class="form-select" id="studentSelect">
+            <option value="">@T("-- Select student --")</option>
+        </select>
+        <div class="form-text">@T("Changing the student reloads the subject list for their program.")</div>
+    </div>
+    <div class="col-md-6">
+        <label asp-for="SubjectId" class="form-label"></label>
+        <select asp-for="SubjectId" asp-items="ViewBag.Subjects" class="form-select">
+            <option value="">@T("-- Select subject --")</option>
+        </select>
+    </div>
+
+    <div class="col-md-3">
+        <label asp-for="Score" class="form-label">@T("Score (0–100)")</label>
+        <input asp-for="Score" type="number" min="0" max="100" step="0.5" class="form-control" id="scoreInput" />
+        <span asp-validation-for="Score" class="text-danger small"></span>
+    </div>
+    <div class="col-md-3">
+        <label asp-for="TermId" class="form-label"></label>
+        <select asp-for="TermId" asp-items="ViewBag.Terms" class="form-select">
+            <option value="">@T("-- Select term --")</option>
+        </select>
+        <span asp-validation-for="TermId" class="text-danger small"></span>
+    </div>
+    <div class="col-md-6">
+        <label class="form-label">@T("Letter grade")</label>
+        <div class="form-control-plaintext"><strong id="letterPreview">—</strong>
+            <span class="text-muted small ms-2" dir="ltr">@string.Join(" · ", Grade.Scale.Take(Grade.Scale.Length - 1).Select(s => $"{s.Letter} ≥ {s.Min}")) · F &lt; 50</span></div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        // Live letter preview, same scale as Grade.Scale.
+        const scale = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Grade.Scale.Select(s => new { min = s.Min, letter = s.Letter })));
+        const score = document.getElementById('scoreInput');
+        const out = document.getElementById('letterPreview');
+        function update() {
+            const v = parseFloat(score.value);
+            out.textContent = isNaN(v) ? '—' : scale.find(s => v >= s.min).letter;
+        }
+        score.addEventListener('input', update);
+        update();
+
+        // Reload with the chosen student so the subject list is filtered to their program.
+        document.getElementById('studentSelect').addEventListener('change', function () {
+            const url = new URL(window.location.href);
+            if (this.value) url.searchParams.set('studentId', this.value); else url.searchParams.delete('studentId');
+            url.searchParams.delete('subjectId');
+            if (!url.pathname.toLowerCase().includes('/edit')) window.location.href = url.toString();
+        });
+    })();
+</script>

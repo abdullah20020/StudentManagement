@@ -1,0 +1,133 @@
+@model List<Offering>
+@{
+    var ctx = (RegistrationContext)ViewBag.Context;
+    var isAdmin = (bool)ViewBag.IsAdmin;
+    int? sid = isAdmin ? ctx.Student.Id : null;
+    ViewData["Title"] = T("Course registration");
+}
+
+<div class="page-head">
+    <div>
+        <h2>@T("Course registration") · @ctx.Term.Name</h2>
+        <div class="sub">
+            @if (isAdmin)
+            {
+                <a asp-controller="Students" asp-action="Details" asp-route-id="@ctx.Student.Id">@ctx.Student.FullName</a>
+                <text> · </text>
+            }
+            @ctx.Student.Course?.Name
+        </div>
+    </div>
+    <form method="get" class="d-flex gap-2">
+        @if (isAdmin) { <input type="hidden" name="studentId" value="@ctx.Student.Id" /> }
+        <select name="termId" class="form-select" onchange="this.form.submit()">
+            @foreach (AcademicTerm t in ViewBag.Terms)
+            {
+                <option value="@t.Id" selected="@(t.Id == ctx.Term.Id)">@t.Name@(t.RegistrationOpen ? " (" + T("open") + ")" : "")</option>
+            }
+        </select>
+    </form>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-sm-6 col-lg-3"><div class="card h-100"><div class="card-body stat">
+        <div class="icon @(ctx.Term.RegistrationOpen ? "" : "red")"><i class="bi @(ctx.Term.RegistrationOpen ? "bi-unlock" : "bi-lock")"></i></div>
+        <div>
+            <div class="label">@T("Registration")</div>
+            <div class="value fs-5">@(ctx.Term.RegistrationOpen ? T("Open") : T("Closed"))</div>
+            @if (!ctx.Term.RegistrationOpen && isAdmin) { <div class="small text-muted">@T("Admins can still register students.")</div> }
+        </div>
+    </div></div></div>
+    <div class="col-sm-6 col-lg-3"><div class="card h-100"><div class="card-body stat">
+        <div class="icon gold"><i class="bi bi-hourglass-split"></i></div>
+        <div class="flex-grow-1">
+            <div class="label">@T("Credit hours")</div>
+            <div class="value fs-5 @(ctx.CurrentCredits > ctx.MaxCredits ? "text-danger" : "")">@ctx.CurrentCredits / @ctx.MaxCredits</div>
+            <div class="progress mt-1" style="height:6px">
+                <div class="progress-bar" style="width:@(Math.Min(100, ctx.CurrentCredits * 100 / Math.Max(1, ctx.MaxCredits)))%"></div>
+            </div>
+        </div>
+    </div></div></div>
+    <div class="col-sm-6 col-lg-3"><div class="card h-100"><div class="card-body stat">
+        <div class="icon blue"><i class="bi bi-graph-up"></i></div>
+        <div><div class="label">@T("CGPA (before this term)")</div><div class="value fs-5">@(ctx.Cgpa?.ToString("0.00") ?? "—")</div></div>
+    </div></div></div>
+    <div class="col-sm-6 col-lg-3"><div class="card h-100"><div class="card-body stat">
+        <div class="icon"><i class="bi bi-shield-check"></i></div>
+        <div>
+            <div class="label">@T("Standing")</div>
+            <div><span class="badge @Academic.StandingBadge(ctx.Cgpa)">@T(Academic.Standing(ctx.Cgpa))</span></div>
+            <div class="small text-muted mt-1">@T("Max {0} credit hours this term", ctx.MaxCredits)</div>
+        </div>
+    </div></div></div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header"><i class="bi bi-journal-plus"></i> @T("Sections offered for {0}", ctx.Student.Course?.Code ?? "")</div>
+    @if (!Model.Any())
+    {
+        <div class="card-body text-muted">@T("No sections are offered for this program in {0}.", ctx.Term.Name)</div>
+    }
+    else
+    {
+        <div class="table-responsive">
+        <table class="table table-sm align-middle">
+            <thead class="table-light">
+                <tr><th>@T("Section")</th><th>@T("Subject")</th><th class="text-end">@T("Cr.")</th><th>@T("Instructor")</th><th>@T("Schedule")</th><th class="text-end">@T("Seats")</th><th style="width:30%"></th></tr>
+            </thead>
+            <tbody>
+                @foreach (var o in Model)
+                {
+                    var s = o.Section;
+                    <tr class="@(o.IsRegistered ? "table-success" : "")">
+                        <td class="text-nowrap"><strong>@s.Subject?.Code-@s.Number</strong></td>
+                        <td>
+                            @s.Subject?.Name
+                            @if (s.Subject!.Prerequisites.Any())
+                            {
+                                <div class="small text-muted">@T("Requires {0}", string.Join(", ", s.Subject.Prerequisites.Select(p => p.Prerequisite?.Code)))</div>
+                            }
+                        </td>
+                        <td class="text-end">@s.Subject.Credits</td>
+                        <td class="small">@(s.Instructor?.FullName ?? T("TBA"))</td>
+                        <td class="small text-nowrap">
+                            @foreach (var m in s.Meetings.OrderBy(m => Array.IndexOf(SectionMeeting.TeachingDays, m.Day)).ThenBy(m => m.StartTime))
+                            {
+                                <div>@DayShort(m.Day) <span dir="ltr">@m.TimeRange</span> <span class="text-muted">@m.Room?.Code</span></div>
+                            }
+                        </td>
+                        <td class="text-end">@(s.Capacity - o.Enrolled)</td>
+                        <td class="text-end">
+                            @if (o.IsRegistered)
+                            {
+                                <form asp-action="Drop" asp-route-registrationId="@o.RegistrationId" asp-route-studentId="@sid" method="post"
+                                      data-confirm="@T("Drop {0}?", s.Subject.Code + "-" + s.Number)">
+                                    <span class="badge bg-success me-2"><i class="bi bi-check2"></i> @T("Registered")</span>
+                                    <button class="btn btn-sm btn-outline-danger">@T("Drop")</button>
+                                </form>
+                            }
+                            else if (o.CanRegister)
+                            {
+                                <form asp-action="Register" asp-route-sectionId="@s.Id" asp-route-studentId="@sid" method="post">
+                                    <button class="btn btn-sm btn-success"><i class="bi bi-plus-lg"></i> @T("Register")</button>
+                                </form>
+                            }
+                            else
+                            {
+                                <ul class="small text-danger mb-0 ps-3 text-start">
+                                    @foreach (var p in o.Problems) { <li>@p</li> }
+                                </ul>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        </div>
+    }
+</div>
+
+<div class="card">
+    <div class="card-header"><i class="bi bi-calendar-week"></i> @T("Weekly timetable") · @ctx.Term.Name</div>
+    <div class="card-body p-2"><partial name="_Timetable" model="(List<TimetableEntry>)ViewBag.Timetable" /></div>
+</div>

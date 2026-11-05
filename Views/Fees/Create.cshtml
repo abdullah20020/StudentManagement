@@ -1,0 +1,118 @@
+@model StudentManagement.ViewModels.FeePaymentViewModel
+@using StudentManagement.ViewModels
+@{
+    ViewData["Title"] = T("Record payment");
+    var last = ViewBag.LastPayment as FeePayment;
+}
+
+<div class="page-head"><h2>@T("Record fee payment")</h2></div>
+
+<form asp-action="Create" method="post" class="form-card">
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+    <input type="hidden" asp-for="ReturnUrl" />
+
+    <div class="row g-3">
+        <div class="col-md-6">
+            <label asp-for="StudentId" class="form-label"></label>
+            <select asp-for="StudentId" asp-items="ViewBag.Students" class="form-select" id="studentSelect">
+                <option value="">@T("-- Select student --")</option>
+            </select>
+            <span asp-validation-for="StudentId" class="text-danger small"></span>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">@T("Current balance")</label>
+            <div class="form-control-plaintext">
+                @if (last != null)
+                {
+                    <strong class="@(last.Balance > 0 ? "text-danger" : "text-success")">@last.Balance.ToString("N2")</strong>
+                    <span class="text-muted small ms-2">@T("after {0} on {1}", last.ReceiptNumber, Date(last.PaidOn))</span>
+                }
+                else if (Model.StudentId.HasValue)
+                {
+                    <span class="text-muted">@T("No previous payments.")</span>
+                }
+                else
+                {
+                    <span class="text-muted">@T("Select a student.")</span>
+                }
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <label asp-for="Amount" class="form-label"></label>
+            <input asp-for="Amount" type="number" step="0.01" min="0.01" class="form-control" id="amount" />
+            <span asp-validation-for="Amount" class="text-danger small"></span>
+        </div>
+        <div class="col-md-4">
+            <label asp-for="Balance" class="form-label"></label>
+            <input asp-for="Balance" type="number" step="0.01" min="0" class="form-control" id="balance" />
+            <span asp-validation-for="Balance" class="text-danger small"></span>
+            @if (last != null && last.Balance > 0)
+            {
+                <div class="form-text">@T("Filled in as current balance minus amount; change it if fees were added.")</div>
+            }
+        </div>
+        <div class="col-md-4">
+            <label asp-for="PaidOn" class="form-label"></label>
+            <input asp-for="PaidOn" class="form-control" max="@DateTime.Today.ToString("yyyy-MM-dd")" />
+            <span asp-validation-for="PaidOn" class="text-danger small"></span>
+        </div>
+
+        <div class="col-md-3">
+            <label asp-for="Term" class="form-label"></label>
+            <select asp-for="Term" class="form-select">
+                @foreach (var t in FeePaymentViewModel.Terms) { <option value="@t">@T(t)</option> }
+            </select>
+            <span asp-validation-for="Term" class="text-danger small"></span>
+        </div>
+        <div class="col-md-3">
+            <label asp-for="Year" class="form-label"></label>
+            <input asp-for="Year" type="number" class="form-control" />
+            <span asp-validation-for="Year" class="text-danger small"></span>
+        </div>
+        <div class="col-md-3">
+            <label asp-for="PaymentMethod" class="form-label"></label>
+            <select asp-for="PaymentMethod" class="form-select">
+                @foreach (var m in FeePaymentViewModel.Methods) { <option value="@m">@T(m)</option> }
+            </select>
+            <span asp-validation-for="PaymentMethod" class="text-danger small"></span>
+        </div>
+        <div class="col-md-3">
+            <label asp-for="TransactionReference" class="form-label"></label>
+            <input asp-for="TransactionReference" class="form-control" dir="ltr" />
+            <span asp-validation-for="TransactionReference" class="text-danger small"></span>
+        </div>
+    </div>
+
+    <div class="mt-4 d-flex gap-2">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-receipt"></i> @T("Save & view receipt")</button>
+        <a href="@(Model.ReturnUrl ?? Url.Action("Index"))" class="btn btn-outline-secondary">@T("Cancel")</a>
+    </div>
+</form>
+
+<script>
+    (function () {
+        // Reload with the chosen student so their current balance shows.
+        document.getElementById('studentSelect').addEventListener('change', function () {
+            const url = new URL(window.location.href);
+            if (this.value) url.searchParams.set('studentId', this.value); else url.searchParams.delete('studentId');
+            window.location.href = url.toString();
+        });
+
+        // Suggest the remaining balance from the current one.
+        const current = @(last?.Balance.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "null");
+        const amount = document.getElementById('amount');
+        const balance = document.getElementById('balance');
+        let touched = balance.value !== '';
+        balance.addEventListener('input', () => touched = true);
+        amount.addEventListener('input', () => {
+            if (current === null || touched) return;
+            const a = parseFloat(amount.value);
+            balance.value = isNaN(a) ? '' : Math.max(0, current - a).toFixed(2);
+        });
+    })();
+</script>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

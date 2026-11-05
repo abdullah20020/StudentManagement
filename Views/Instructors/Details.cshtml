@@ -1,0 +1,97 @@
+@model Instructor
+@{
+    ViewData["Title"] = Model.FullName;
+    var term = ViewBag.Term as AcademicTerm;
+    var sections = (List<Section>)ViewBag.Sections;
+    var enrolled = (Dictionary<int, int>)ViewBag.Enrolled;
+}
+
+<div class="page-head">
+    <div class="d-flex gap-3 align-items-center">
+        <div class="stat"><div class="icon" style="width:64px;height:64px;font-size:1.8rem"><i class="bi bi-person-badge"></i></div></div>
+        <div>
+            <h2>@Model.FullName</h2>
+            <div class="sub">@Model.Department?.Name · @Model.Department?.Faculty?.Name
+                @if (!Model.IsActive) { <span class="badge bg-secondary ms-1">@T("Inactive")</span> }</div>
+        </div>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary"><i class="bi bi-pencil"></i> @T("Edit")</a>
+        <form asp-action="Delete" asp-route-id="@Model.Id" method="post" data-confirm="@T("Delete this instructor and their login?")">
+            <button class="btn btn-outline-danger"><i class="bi bi-trash"></i> @T("Delete")</button>
+        </form>
+        <a asp-action="Index" class="btn btn-outline-secondary">@T("Back")</a>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-lg-5">
+        <div class="card h-100">
+            <div class="card-header"><i class="bi bi-person-vcard"></i> @T("Profile")</div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-4">@T("Email")</dt><dd class="col-8" dir="ltr">@Model.Email</dd>
+                    <dt class="col-4">@T("Phone")</dt><dd class="col-8" dir="ltr">@(Model.PhoneNumber ?? "—")</dd>
+                    <dt class="col-4">@T("Office")</dt><dd class="col-8">@(Model.Office ?? "—")</dd>
+                    <dt class="col-4">@T("Hired")</dt><dd class="col-8">@Date(Model.HireDate)</dd>
+                    <dt class="col-4">@T("Login")</dt>
+                    <dd class="col-8 mb-0">
+                        @if ((bool)ViewBag.HasLogin)
+                        {
+                            <span class="badge bg-success"><i class="bi bi-key"></i> @T("Has a login")</span>
+                        }
+                        else
+                        {
+                            <form asp-action="CreateLogin" asp-route-id="@Model.Id" method="post" class="d-inline">
+                                <button class="btn btn-sm btn-outline-success"><i class="bi bi-key"></i> @T("Create login")</button>
+                            </form>
+                        }
+                    </dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-easel"></i> @T("Sections")</span>
+                <form method="get" class="d-flex gap-1">
+                    <select name="termId" class="form-select form-select-sm" onchange="this.form.submit()">
+                        @foreach (AcademicTerm t in ViewBag.Terms)
+                        {
+                            <option value="@t.Id" selected="@(term?.Id == t.Id)">@t.Name</option>
+                        }
+                    </select>
+                </form>
+            </div>
+            @if (sections.Any())
+            {
+                <table class="table table-sm align-middle">
+                    <thead><tr><th>@T("Section")</th><th>@T("Subject")</th><th class="text-end">@T("Credits")</th><th class="text-end">@T("Enrolled")</th></tr></thead>
+                    <tbody>
+                        @foreach (var s in sections)
+                        {
+                            <tr>
+                                <td><a asp-controller="Sections" asp-action="Details" asp-route-id="@s.Id">@s.Subject?.Code-@s.Number</a></td>
+                                <td>@s.Subject?.Name</td>
+                                <td class="text-end">@s.Subject?.Credits</td>
+                                <td class="text-end">@enrolled.GetValueOrDefault(s.Id)/@s.Capacity</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <div class="card-body text-muted">@T("No sections in {0}.", term?.Name ?? "")</div>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header"><i class="bi bi-calendar-week"></i> @T("Weekly timetable") · @term?.Name</div>
+    <div class="card-body p-2">
+        <partial name="_Timetable" model="(List<TimetableEntry>)ViewBag.Timetable" />
+    </div>
+</div>

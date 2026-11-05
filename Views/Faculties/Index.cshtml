@@ -1,0 +1,47 @@
+@model List<Faculty>
+@{
+    ViewData["Title"] = T("Faculties");
+}
+
+<div class="page-head">
+    <div>
+        <h2>@T("Faculties")</h2>
+        <div class="sub">@T("The university's faculties and their departments.")</div>
+    </div>
+    <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg"></i> @T("New faculty")</a>
+</div>
+
+<div class="row g-3">
+    @foreach (var f in Model)
+    {
+        var programs = f.Departments.SelectMany(d => d.Courses).ToList();
+        <div class="col-md-6 col-lg-4">
+            <a asp-action="Details" asp-route-id="@f.Id" class="tile">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="stat mb-3">
+                            <div class="icon"><i class="bi bi-building"></i></div>
+                            <div>
+                                <div class="fw-bold">@f.Name</div>
+                                <code>@f.Code</code>
+                                @if (!f.IsActive) { <span class="badge bg-secondary ms-1">@T("Inactive")</span> }
+                            </div>
+                        </div>
+                        <div class="text-muted small mb-3"><i class="bi bi-person-workspace"></i> @T("Dean"): @(f.Dean ?? "—")</div>
+                        <div class="d-flex justify-content-between text-center border-top pt-3">
+                            <div><div class="fs-5 fw-bold">@f.Departments.Count</div><div class="small text-muted">@T("Departments")</div></div>
+                            <div><div class="fs-5 fw-bold">@programs.Count</div><div class="small text-muted">@T("Programs")</div></div>
+                            <div><div class="fs-5 fw-bold">@f.Departments.Sum(d => d.Instructors.Count)</div><div class="small text-muted">@T("Instructors")</div></div>
+                            <div><div class="fs-5 fw-bold">@programs.Sum(c => c.Students.Count)</div><div class="small text-muted">@T("Students")</div></div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+    }
+</div>
+
+@if ((int)ViewBag.Unassigned > 0)
+{
+    <p class="text-muted mt-3">@T("{0} department(s) aren't assigned to a faculty.", (int)ViewBag.Unassigned)</p>
+}

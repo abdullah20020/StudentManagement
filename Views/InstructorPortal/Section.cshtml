@@ -1,0 +1,63 @@
+@model Section
+@{
+    ViewData["Title"] = $"{Model.Subject?.Code}-{Model.Number}";
+    var roster = (List<Student>)ViewBag.Roster;
+    var grades = (Dictionary<int, Grade>)ViewBag.Grades;
+    var attendance = (Dictionary<int, decimal?>)ViewBag.Attendance;
+}
+
+<div class="page-head">
+    <div>
+        <h2>@Model.Subject?.Code-@Model.Number · @Model.Subject?.Name</h2>
+        <div class="sub">@Model.Term?.Name · @T("{0} credit hours", Model.Subject?.Credits ?? 0) · @T("{0} student(s)", roster.Count)</div>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-controller="Attendance" asp-action="Index" asp-route-sectionId="@Model.Id" class="btn btn-outline-success"><i class="bi bi-check2-square"></i> @T("Take attendance")</a>
+        <a asp-action="Index" asp-route-termId="@Model.TermId" class="btn btn-outline-secondary">@T("Back")</a>
+    </div>
+</div>
+
+@if (!roster.Any())
+{
+    <p class="text-muted">@T("No students are registered in this section yet.")</p>
+}
+else
+{
+    <form asp-action="SaveGrades" asp-route-id="@Model.Id" method="post">
+        <div class="table-wrap mb-3">
+            <table class="table align-middle">
+                <thead class="table-dark">
+                    <tr><th>@T("Student")</th><th>@T("Student ID")</th><th class="text-end">@T("Attendance")</th><th style="width:150px">@T("Score (0–100)")</th><th class="text-center">@T("Grade")</th></tr>
+                </thead>
+                <tbody>
+                    @for (var i = 0; i < roster.Count; i++)
+                    {
+                        var s = roster[i];
+                        grades.TryGetValue(s.Id, out var g);
+                        var rate = attendance.GetValueOrDefault(s.Id);
+                        <tr>
+                            <td>@s.FullName<input type="hidden" name="rows[@i].StudentId" value="@s.Id" /></td>
+                            <td><code>@s.AdmissionNumber</code></td>
+                            <td class="text-end @(rate < 75 ? "text-danger fw-bold" : "")">@(rate.HasValue ? rate.Value.ToString("0.#") + "%" : "—")</td>
+                            <td><input name="rows[@i].Score" type="number" min="0" max="100" step="0.5" value="@g?.Score.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)" class="form-control form-control-sm score" /></td>
+                            <td class="text-center"><span class="badge letter @(g != null ? Grade.Badge(g.LetterGrade) : "bg-light text-dark")">@(g?.LetterGrade ?? "—")</span></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <button class="btn btn-primary"><i class="bi bi-save"></i> @T("Save grades")</button>
+        <span class="text-muted small ms-2">@T("Leave a score empty to clear that grade.")</span>
+    </form>
+
+    <script>
+        // Live letter preview with the same scale as Grade.Scale.
+        const scale = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Grade.Scale.Select(s => new { min = s.Min, letter = s.Letter })));
+        document.querySelectorAll('.score').forEach(input => input.addEventListener('input', () => {
+            const v = parseFloat(input.value);
+            const badge = input.closest('tr').querySelector('.letter');
+            badge.textContent = isNaN(v) ? '—' : scale.find(s => v >= s.min).letter;
+            badge.className = 'badge letter bg-secondary';
+        }));
+    </script>
+}

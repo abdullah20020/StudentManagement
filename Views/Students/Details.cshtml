@@ -1,0 +1,201 @@
+@model Student
+@{
+    ViewData["Title"] = Model.FullName;
+    var returnUrl = Url.Action("Details", new { id = Model.Id });
+    int Att(string status) => Model.Attendances.Count(a => a.Status == status);
+    var attRate = Attendance.Rate(Att("Present"), Att("Late"), Att("Absent"));
+    var latestFee = Model.FeePayments.OrderByDescending(f => f.PaidOn).ThenByDescending(f => f.Id).FirstOrDefault();
+    var grades = Model.Grades.OrderBy(g => g.Term?.StartDate).ThenBy(g => g.Subject?.Code).ToList();
+    var transcript = Academic.Transcript(Model.Grades);
+    var cgpa = transcript.LastOrDefault()?.Cgpa;
+    var earned = transcript.LastOrDefault()?.EarnedCredits ?? 0;
+    var term = ViewBag.Term as AcademicTerm;
+    var regs = (List<Registration>)ViewBag.Registrations;
+}
+
+<div class="page-head">
+    <div class="d-flex gap-3 align-items-center">
+        <div class="stat"><div class="icon" style="width:64px;height:64px;font-size:1.8rem"><i class="bi bi-person"></i></div></div>
+        <div>
+            <h2>@Model.FullName</h2>
+            <div class="sub">
+                <code>@Model.AdmissionNumber</code>
+                @if (Model.IsActive) { <span class="badge bg-success ms-1">@T("Active")</span> }
+                else { <span class="badge bg-secondary ms-1">@T("Inactive")</span> }
+                <span class="badge @Academic.StandingBadge(cgpa) ms-1">@T(Academic.Standing(cgpa))</span>
+            </div>
+        </div>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-controller="Transcript" asp-action="Index" asp-route-studentId="@Model.Id" class="btn btn-outline-dark"><i class="bi bi-file-earmark-text"></i> @T("Transcript")</a>
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary"><i class="bi bi-pencil"></i> @T("Edit")</a>
+        <a asp-action="Index" class="btn btn-outline-secondary">@T("Back to list")</a>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-sm-6 col-lg-3"><div class="card h-100"><div class="card-body stat">
+        <div class="icon"><i class="bi bi-graph-up"></i></div>
+        <div><div class="label">@T("CGPA")</div><div class="value">@(cgpa?.ToString("0.00") ?? "—")</div></div>
+    </div></div></div>
+    <div class="col-sm-6 col-lg-3"><div class="card h-100"><div class="card-body stat">
+        <div class="icon gold"><i class="bi bi-award"></i></div>
+        <div><div class="label">@T("Credits earned")</div><div class="value">@earned <span class="fs-6 text-muted">/ @Model.Course?.Credits</span></div>
+            <div class="small text-muted">@T("Level {0}", Academic.Level(earned))</div></div>
+    </div></div></div>
+    <div class="col-sm-6 col-lg-3"><div class="card h-100"><div class="card-body stat">
+        <div class="icon blue"><i class="bi bi-check2-square"></i></div>
+        <div><div class="label">@T("Attendance")</div><div class="value @(attRate < 75 ? "text-danger" : "")">@(attRate.HasValue ? attRate.Value.ToString("0.#") + "%" : "—")</div></div>
+    </div></div></div>
+    <div class="col-sm-6 col-lg-3"><div class="card h-100"><div class="card-body stat">
+        <div class="icon red"><i class="bi bi-cash-coin"></i></div>
+        <div><div class="label">@T("Fee balance")</div><div class="value @(latestFee?.Balance > 0 ? "text-danger" : "text-success")">@(latestFee?.Balance.ToString("N0") ?? "0") <span class="fs-6">@T("EGP")</span></div></div>
+    </div></div></div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-5">
+        <div class="card h-100">
+            <div class="card-header"><i class="bi bi-person-vcard"></i> @T("Profile")</div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-5">@T("Email")</dt>
+                    <dd class="col-7" dir="ltr">@Model.Email</dd>
+                    <dt class="col-5">@T("Phone")</dt>
+                    <dd class="col-7" dir="ltr">@(Model.PhoneNumber ?? "—")</dd>
+                    <dt class="col-5">@T("Gender")</dt>
+                    <dd class="col-7">@T(Model.Gender)</dd>
+                    <dt class="col-5">@T("Date of birth")</dt>
+                    <dd class="col-7">@Date(Model.DateOfBirth) (@Model.Age)</dd>
+                    <dt class="col-5">@T("Address")</dt>
+                    <dd class="col-7">@(Model.Address ?? "—")</dd>
+                    <dt class="col-5">@T("Program")</dt>
+                    <dd class="col-7"><a asp-controller="Courses" asp-action="Details" asp-route-id="@Model.CourseId">@Model.Course?.Name</a></dd>
+                    <dt class="col-5">@T("Department")</dt>
+                    <dd class="col-7">@Model.Course?.Department?.Name</dd>
+                    <dt class="col-5">@T("Faculty")</dt>
+                    <dd class="col-7">@Model.Course?.Department?.Faculty?.Name</dd>
+                    <dt class="col-5">@T("Enrolled")</dt>
+                    <dd class="col-7">@Date(Model.EnrollmentDate)</dd>
+                    <dt class="col-5">@T("Login")</dt>
+                    <dd class="col-7 mb-0">
+                        @if ((bool)ViewBag.HasLogin)
+                        {
+                            <span class="badge bg-success"><i class="bi bi-key"></i> @T("Has a login")</span>
+                        }
+                        else
+                        {
+                            <form asp-action="CreateLogin" asp-route-id="@Model.Id" method="post" class="d-inline">
+                                <button class="btn btn-sm btn-outline-success"><i class="bi bi-key"></i> @T("Create login")</button>
+                            </form>
+                        }
+                    </dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-journal-check"></i> @T("Registered courses") · @(term == null ? "" : T(term.Season) + " " + term.Year)
+                    <span class="text-muted small fw-normal">(@T("{0} credit hours", regs.Sum(r => r.Section!.Subject!.Credits)))</span></span>
+                <a asp-controller="Registration" asp-action="Index" asp-route-studentId="@Model.Id" class="btn btn-sm btn-success">@T("Manage registration")</a>
+            </div>
+            @if (regs.Any())
+            {
+                <table class="table table-sm">
+                    <tbody>
+                        @foreach (var r in regs.OrderBy(r => r.Section!.Subject!.Code))
+                        {
+                            var sec = r.Section!;
+                            var subj = sec.Subject!;
+                            <tr>
+                                <td><a asp-controller="Sections" asp-action="Details" asp-route-id="@r.SectionId">@subj.Code-@sec.Number</a></td>
+                                <td>@subj.Name</td>
+                                <td class="text-end">@T("{0} cr.", subj.Credits)</td>
+                                <td class="small text-muted">@(sec.Instructor?.FullName ?? T("TBA"))</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <div class="card-body text-muted">@T("Not registered in any course this term.")</div>
+            }
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-award"></i> @T("Grades")</span>
+                <span class="d-flex gap-1">
+                    <a asp-controller="Grades" asp-action="Index" asp-route-studentId="@Model.Id" class="btn btn-sm btn-outline-secondary">@T("All grades")</a>
+                    <a asp-controller="Grades" asp-action="Create" asp-route-studentId="@Model.Id" asp-route-returnUrl="@returnUrl" class="btn btn-sm btn-success">+ @T("Add grade")</a>
+                </span>
+            </div>
+            @if (grades.Any())
+            {
+                <table class="table table-sm">
+                    <thead>
+                        <tr><th>@T("Subject")</th><th>@T("Term")</th><th class="text-end">@T("Score")</th><th class="text-center">@T("Grade")</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var g in grades)
+                        {
+                            <tr>
+                                <td><code>@g.Subject?.Code</code> @g.Subject?.Name</td>
+                                <td class="small">@T(g.Term?.Season ?? "") @g.Term?.Year</td>
+                                <td class="text-end">@g.Score.ToString("0.#")</td>
+                                <td class="text-center"><span class="badge @Grade.Badge(g.LetterGrade)">@g.LetterGrade</span></td>
+                                <td class="text-end"><a asp-controller="Grades" asp-action="Edit" asp-route-id="@g.Id" asp-route-returnUrl="@returnUrl" class="btn btn-sm btn-link py-0">@T("Edit")</a></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <div class="card-body text-muted">@T("No grades recorded.")</div>
+            }
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-cash-coin"></i> @T("Fee payments")</span>
+                <span class="d-flex gap-1">
+                    <a asp-controller="Fees" asp-action="Index" asp-route-studentId="@Model.Id" class="btn btn-sm btn-outline-secondary">@T("All payments")</a>
+                    <a asp-controller="Fees" asp-action="Create" asp-route-studentId="@Model.Id" asp-route-returnUrl="@returnUrl" class="btn btn-sm btn-success">+ @T("Record payment")</a>
+                </span>
+            </div>
+            @if (Model.FeePayments.Any())
+            {
+                <table class="table table-sm">
+                    <thead>
+                        <tr><th>@T("Receipt")</th><th>@T("Term")</th><th>@T("Method")</th><th class="text-end">@T("Amount")</th><th class="text-end">@T("Balance")</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var f in Model.FeePayments.OrderByDescending(f => f.PaidOn))
+                        {
+                            <tr>
+                                <td><a asp-controller="Fees" asp-action="Receipt" asp-route-id="@f.Id"><code>@f.ReceiptNumber</code></a></td>
+                                <td>@T(f.Term) @f.Year</td>
+                                <td>@T(f.PaymentMethod)</td>
+                                <td class="text-end">@f.Amount.ToString("N0")</td>
+                                <td class="text-end">@f.Balance.ToString("N0")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <div class="card-body text-muted">@T("No payments recorded.")</div>
+            }
+        </div>
+    </div>
+</div>

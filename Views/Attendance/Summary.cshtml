@@ -1,0 +1,103 @@
+@model List<StudentManagement.ViewModels.AttendanceSummaryRow>
+@{
+    ViewData["Title"] = T("Attendance summary");
+    int threshold = ViewBag.Threshold;
+    var flagged = Model.Count(r => r.Rate.HasValue && r.Rate < threshold);
+}
+
+<div class="page-head">
+    <div>
+        <h2>@T("Attendance summary")</h2>
+        <div class="sub">@T("Rate = (Present + Late) ÷ (Present + Late + Absent); excused days aren't counted.")</div>
+    </div>
+    <a asp-action="Index" class="btn btn-primary"><i class="bi bi-check2-square"></i> @T("Mark attendance")</a>
+</div>
+
+<form method="get" class="filter-bar row g-2">
+    <div class="col-md-2">
+        <label class="form-label small mb-1">@T("Program")</label>
+        <select name="courseId" class="form-select">
+            <option value="">@T("All programs")</option>
+            @foreach (var c in ViewBag.Courses)
+            {
+                <option value="@c.Id" selected="@(ViewBag.CourseId == c.Id)">@c.Name</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-3">
+        <label class="form-label small mb-1">@T("Subject")</label>
+        <select name="subjectId" class="form-select">
+            <option value="">@T("All subjects")</option>
+            @foreach (var s in ViewBag.Subjects)
+            {
+                <option value="@s.Id" selected="@(ViewBag.SubjectId == s.Id)">@s.Code — @s.Name</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-2">
+        <label class="form-label small mb-1">@T("From")</label>
+        <input type="date" name="from" value="@ViewBag.From" class="form-control" />
+    </div>
+    <div class="col-md-2">
+        <label class="form-label small mb-1">@T("To")</label>
+        <input type="date" name="to" value="@ViewBag.To" class="form-control" />
+    </div>
+    <div class="col-md-2">
+        <label class="form-label small mb-1">@T("Min %")</label>
+        <input type="number" name="threshold" value="@threshold" min="0" max="100" class="form-control" />
+    </div>
+    <div class="col-md-1 d-flex align-items-end">
+        <button class="btn btn-secondary w-100">@T("Go")</button>
+    </div>
+</form>
+
+@if (!Model.Any())
+{
+    <p class="text-muted">@T("No attendance recorded for these filters yet.")</p>
+}
+else
+{
+    <p class="small mb-2">
+        @T("{0} student(s)", Model.Count) ·
+        @if (flagged > 0)
+        {
+            <span class="badge bg-danger">@T("{0} below {1}%", flagged, threshold)</span>
+        }
+        else
+        {
+            <span class="badge bg-success">@T("Everyone at or above {0}%", threshold)</span>
+        }
+    </p>
+
+    <div class="table-wrap">
+        <table class="table table-hover table-sm align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>@T("Student")</th><th>@T("Program")</th>
+                    <th class="text-end">@T("Present")</th><th class="text-end">@T("Late")</th>
+                    <th class="text-end">@T("Absent")</th><th class="text-end">@T("Excused")</th>
+                    <th class="text-end">@T("Rate")</th><th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var r in Model)
+                {
+                    var low = r.Rate.HasValue && r.Rate < threshold;
+                    <tr class="@(low ? "table-danger" : "")">
+                        <td>
+                            <a asp-controller="Students" asp-action="Details" asp-route-id="@r.StudentId">@r.StudentName</a>
+                            <code class="ms-1 small">@r.AdmissionNumber</code>
+                        </td>
+                        <td class="small">@r.CourseName</td>
+                        <td class="text-end">@r.Present</td>
+                        <td class="text-end">@r.Late</td>
+                        <td class="text-end">@r.Absent</td>
+                        <td class="text-end">@r.Excused</td>
+                        <td class="text-end"><strong>@(r.Rate.HasValue ? r.Rate.Value.ToString("0.#") + "%" : "—")</strong></td>
+                        <td>@if (low) { <span class="badge bg-danger">@T("Below {0}%", threshold)</span> }</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

@@ -1,0 +1,19 @@
+@model StudentManagement.ViewModels.GradeViewModel
+@{
+    ViewData["Title"] = T("Enter grade");
+}
+
+<div class="page-head"><h2>@T("Enter grade")</h2></div>
+
+<form asp-action="Create" method="post" class="form-card">
+    <partial name="_GradeForm" model="Model" />
+
+    <div class="mt-4 d-flex gap-2">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-check2"></i> @T("Save")</button>
+        <a href="@(Model.ReturnUrl ?? Url.Action("Index"))" class="btn btn-outline-secondary">@T("Cancel")</a>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

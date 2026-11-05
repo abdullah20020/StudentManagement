@@ -1,0 +1,15 @@
+﻿@model ErrorViewModel
+@{
+    ViewData["Title"] = T("Error");
+}
+
+<div class="text-center py-5">
+    <div class="display-4 text-danger mb-3"><i class="bi bi-exclamation-octagon"></i></div>
+    <h2>@T("Something went wrong")</h2>
+    <p class="text-muted">@T("An error occurred while processing your request.")</p>
+    @if (Model.ShowRequestId)
+    {
+        <p class="small">@T("Request ID"): <code>@Model.RequestId</code></p>
+    }
+    <a asp-controller="Home" asp-action="Index" class="btn btn-primary">@T("Go to my home page")</a>
+</div>

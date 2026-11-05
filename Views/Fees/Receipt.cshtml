@@ -1,0 +1,58 @@
+@model FeePayment
+@{
+    ViewData["Title"] = T("Receipt {0}", Model.ReceiptNumber);
+}
+
+<div class="d-flex justify-content-between mb-3 no-print">
+    <a asp-action="Index" class="btn btn-outline-secondary">@T("Back to payments")</a>
+    <div class="d-flex gap-2">
+        <a asp-controller="Students" asp-action="Details" asp-route-id="@Model.StudentId" class="btn btn-outline-primary">@T("Student")</a>
+        <button type="button" class="btn btn-primary" onclick="window.print()"><i class="bi bi-printer"></i> @T("Print receipt")</button>
+    </div>
+</div>
+
+<div class="card receipt mx-auto" style="max-width:680px">
+    <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-start mb-4 pb-3 border-bottom">
+            <div class="d-flex align-items-center gap-3">
+                <partial name="_Crest" />
+                <div>
+                    <h4 class="mb-0">@T(UniversityName)</h4>
+                    <div class="text-muted">@T("Bursar's office · Official fee receipt")</div>
+                </div>
+            </div>
+            <div class="text-end">
+                <div class="text-muted small">@T("Receipt no.")</div>
+                <div class="fs-5"><code>@Model.ReceiptNumber</code></div>
+            </div>
+        </div>
+
+        <dl class="row mb-4">
+            <dt class="col-5">@T("Student")</dt>
+            <dd class="col-7">@Model.Student?.FullName</dd>
+            <dt class="col-5">@T("Student ID")</dt>
+            <dd class="col-7">@Model.Student?.AdmissionNumber</dd>
+            <dt class="col-5">@T("Program")</dt>
+            <dd class="col-7">@Model.Student?.Course?.Name</dd>
+            <dt class="col-5">@T("Term")</dt>
+            <dd class="col-7">@T(Model.Term) @Model.Year</dd>
+            <dt class="col-5">@T("Date paid")</dt>
+            <dd class="col-7">@Date(Model.PaidOn, "dd MMMM yyyy")</dd>
+            <dt class="col-5">@T("Payment method")</dt>
+            <dd class="col-7">@T(Model.PaymentMethod)</dd>
+            <dt class="col-5">@T("Reference")</dt>
+            <dd class="col-7" dir="ltr">@(Model.TransactionReference ?? "—")</dd>
+        </dl>
+
+        <table class="table mb-0">
+            <tr>
+                <th>@T("Amount paid")</th>
+                <td class="text-end fs-5"><strong>@Model.Amount.ToString("N2") @T("EGP")</strong></td>
+            </tr>
+            <tr>
+                <th>@T("Balance remaining")</th>
+                <td class="text-end @(Model.Balance > 0 ? "text-danger" : "text-success")">@Model.Balance.ToString("N2") @T("EGP")</td>
+            </tr>
+        </table>
+    </div>
+</div>

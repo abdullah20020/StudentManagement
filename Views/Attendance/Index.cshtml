@@ -1,0 +1,123 @@
+@model StudentManagement.ViewModels.AttendanceSheetViewModel
+@{
+    ViewData["Title"] = T("Attendance");
+    var sections = (List<Section>)ViewBag.Sections;
+    var term = ViewBag.Term as AcademicTerm;
+    string Btn(string s) => s switch { "Present" => "success", "Late" => "warning", "Absent" => "danger", _ => "secondary" };
+}
+
+<div class="page-head">
+    <div>
+        <h2>@T("Mark attendance")</h2>
+        <div class="sub">@term?.Name</div>
+    </div>
+    @if (User.IsInRole("Admin"))
+    {
+        <a asp-action="Summary" class="btn btn-outline-primary"><i class="bi bi-bar-chart"></i> @T("Attendance summary")</a>
+    }
+</div>
+
+<form method="get" class="filter-bar row g-2">
+    <div class="col-md-6">
+        <label class="form-label small mb-1">@T("Section")</label>
+        <select name="sectionId" class="form-select" required>
+            <option value="">@T("-- Select section --")</option>
+            @foreach (var grp in sections.GroupBy(s => s.Subject?.Course?.Name))
+            {
+                <optgroup label="@grp.Key">
+                    @foreach (var s in grp)
+                    {
+                        <option value="@s.Id" selected="@(Model.SectionId == s.Id)">@s.Subject?.Code-@s.Number — @s.Subject?.Name</option>
+                    }
+                </optgroup>
+            }
+        </select>
+    </div>
+    <div class="col-md-3">
+        <label class="form-label small mb-1">@T("Date")</label>
+        <input type="date" name="date" value="@Model.Date.ToString("yyyy-MM-dd")" max="@DateTime.Today.ToString("yyyy-MM-dd")" class="form-control" />
+    </div>
+    <div class="col-md-3 d-flex align-items-end">
+        <button class="btn btn-secondary w-100"><i class="bi bi-journal-check"></i> @T("Open register")</button>
+    </div>
+</form>
+
+@if (Model.SectionId.HasValue)
+{
+    <h5 class="mb-1">@Model.SubjectName</h5>
+    <p class="text-muted">@Model.CourseName · @Date(Model.Date, "dddd, dd MMMM yyyy")</p>
+
+    if (!Model.Rows.Any())
+    {
+        <p class="text-muted">@T("No students are registered in this section.")</p>
+    }
+    else
+    {
+        <form asp-action="Save" method="post" id="sheet">
+            <input type="hidden" asp-for="SectionId" />
+            <input type="hidden" name="Date" value="@Model.Date.ToString("yyyy-MM-dd")" />
+
+            <div class="d-flex gap-2 mb-2">
+                <button type="button" class="btn btn-sm btn-outline-success" data-all="Present"><i class="bi bi-check-all"></i> @T("Mark all present")</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-all="">@T("Clear all")</button>
+            </div>
+
+            <div class="table-wrap mb-3">
+                <table class="table align-middle">
+                    <thead class="table-dark">
+                        <tr><th>@T("Student")</th><th>@T("Student ID")</th><th>@T("Status")</th></tr>
+                    </thead>
+                    <tbody>
+                        @for (var i = 0; i < Model.Rows.Count; i++)
+                        {
+                            var row = Model.Rows[i];
+                            <tr>
+                                <td>
+                                    <input type="hidden" name="Rows[@i].StudentId" value="@row.StudentId" />
+                                    @if (User.IsInRole("Admin"))
+                                    {
+                                        <a asp-controller="Students" asp-action="Details" asp-route-id="@row.StudentId">@row.StudentName</a>
+                                    }
+                                    else
+                                    {
+                                        @row.StudentName
+                                    }
+                                </td>
+                                <td><code>@row.AdmissionNumber</code></td>
+                                <td>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        @foreach (var status in Attendance.Statuses)
+                                        {
+                                            var id = $"r{i}-{status}";
+                                            <input type="radio" class="btn-check" name="Rows[@i].Status" id="@id" value="@status" checked="@(row.Status == status)" autocomplete="off" />
+                                            <label class="btn btn-outline-@Btn(status)" for="@id">@T(status)</label>
+                                        }
+                                        <input type="radio" class="btn-check" name="Rows[@i].Status" id="r@(i)-none" value="" checked="@(string.IsNullOrEmpty(row.Status))" autocomplete="off" />
+                                        <label class="btn btn-outline-light text-muted border" for="r@(i)-none" title="@T("Not marked")">—</label>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> @T("Save attendance")</button>
+        </form>
+
+        <script>
+            document.querySelectorAll('[data-all]').forEach(btn => btn.addEventListener('click', () => {
+                const value = btn.dataset.all;
+                document.querySelectorAll('#sheet input[type=radio]').forEach(r => { if (r.value === value) r.checked = true; });
+            }));
+        </script>
+    }
+}
+else if (!sections.Any())
+{
+    <p class="text-muted">@T("There are no sections to take attendance for this term.")</p>
+}
+else
+{
+    <p class="text-muted">@T("Choose a section and date to open the class register.")</p>
+}

@@ -1,0 +1,114 @@
+@model IEnumerable<Grade>
+@{
+    ViewData["Title"] = T("Grades");
+    var returnUrl = Context.Request.Path + Context.Request.QueryString;
+    var list = Model.ToList();
+    var avg = list.Any() ? list.Average(g => g.Score) : (decimal?)null;
+}
+
+<div class="page-head">
+    <div>
+        <h2>@T("Grades") @if (ViewBag.StudentName != null) { <small class="text-muted fs-5">— @ViewBag.StudentName</small> }</h2>
+        <div class="sub">@T("Every recorded result, by student, subject and term.")</div>
+    </div>
+    <a asp-action="Create" asp-route-studentId="@ViewBag.StudentId" asp-route-returnUrl="@returnUrl" class="btn btn-primary"><i class="bi bi-plus-lg"></i> @T("Enter grade")</a>
+</div>
+
+<form method="get" class="filter-bar row g-2">
+    @if (ViewBag.StudentId != null)
+    {
+        <input type="hidden" name="studentId" value="@ViewBag.StudentId" />
+    }
+    <div class="col-md-3">
+        <select name="courseId" class="form-select">
+            <option value="">@T("All programs")</option>
+            @foreach (var c in ViewBag.Courses)
+            {
+                <option value="@c.Id" selected="@(ViewBag.CourseId == c.Id)">@c.Name</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-3">
+        <select name="subjectId" class="form-select">
+            <option value="">@T("All subjects")</option>
+            @foreach (var s in ViewBag.Subjects)
+            {
+                <option value="@s.Id" selected="@(ViewBag.SubjectId == s.Id)">@s.Code — @s.Name</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-2">
+        <select name="termId" class="form-select">
+            <option value="">@T("All terms")</option>
+            @foreach (AcademicTerm t in ViewBag.Terms)
+            {
+                <option value="@t.Id" selected="@(ViewBag.TermId == t.Id)">@t.Name</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-2">
+        <select name="letter" class="form-select">
+            <option value="">@T("All grades")</option>
+            @foreach (var s in Grade.Scale)
+            {
+                <option value="@s.Letter" selected="@(ViewBag.Letter == s.Letter)">@s.Letter</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-2 d-flex gap-2">
+        <button class="btn btn-secondary flex-grow-1">@T("Filter")</button>
+        <a asp-action="Index" class="btn btn-outline-secondary">@T("Reset")</a>
+    </div>
+</form>
+
+@if (list.Any())
+{
+    <p class="text-muted small mb-2">
+        @T("{0} grade(s)", list.Count) · @T("average score") <strong>@avg!.Value.ToString("0.0")</strong> ·
+        @foreach (var grp in list.GroupBy(g => g.LetterGrade).OrderBy(g => Array.FindIndex(Grade.Scale, s => s.Letter == g.Key)))
+        {
+            <span class="badge @Grade.Badge(grp.Key) me-1">@grp.Key: @grp.Count()</span>
+        }
+    </p>
+
+    <div class="table-wrap">
+        <table class="table table-hover table-sm align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>@T("Student")</th>
+                    <th>@T("Subject")</th>
+                    <th>@T("Program")</th>
+                    <th>@T("Term")</th>
+                    <th class="text-end">@T("Score")</th>
+                    <th class="text-center">@T("Grade")</th>
+                    <th class="text-end">@T("Points")</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var g in list)
+                {
+                    <tr>
+                        <td><a asp-controller="Students" asp-action="Details" asp-route-id="@g.StudentId">@g.Student?.FullName</a></td>
+                        <td><code>@g.Subject?.Code</code> @g.Subject?.Name</td>
+                        <td class="small">@g.Subject?.Course?.Name</td>
+                        <td>@g.Term?.Name</td>
+                        <td class="text-end">@g.Score.ToString("0.#")</td>
+                        <td class="text-center"><span class="badge @Grade.Badge(g.LetterGrade)">@g.LetterGrade</span></td>
+                        <td class="text-end">@g.Points.ToString("0.0")</td>
+                        <td class="text-end text-nowrap">
+                            <a asp-action="Edit" asp-route-id="@g.Id" asp-route-returnUrl="@returnUrl" class="btn btn-sm btn-outline-secondary" title="@T("Edit")"><i class="bi bi-pencil"></i></a>
+                            <form asp-action="Delete" asp-route-id="@g.Id" asp-route-returnUrl="@returnUrl" method="post" class="d-inline" data-confirm="@T("Delete this grade?")">
+                                <button class="btn btn-sm btn-outline-danger" title="@T("Delete")"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+else
+{
+    <p class="text-muted">@T("No grades match these filters.")</p>
+}

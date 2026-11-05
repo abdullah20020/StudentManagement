@@ -1,0 +1,53 @@
+@model List<FeePayment>
+@{
+    ViewData["Title"] = T("Outstanding balances");
+}
+
+<div class="page-head">
+    <div>
+        <h2>@T("Outstanding balances")</h2>
+        <div class="sub">@T("Based on each student's most recent payment. Students who have never paid aren't listed.")</div>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-secondary">@T("All payments")</a>
+</div>
+
+@if (!Model.Any())
+{
+    <p class="text-success">@T("No outstanding balances.")</p>
+}
+else
+{
+    <div class="card mb-3" style="max-width:360px"><div class="card-body stat">
+        <div class="icon red"><i class="bi bi-exclamation-circle"></i></div>
+        <div>
+            <div class="label">@T("Total outstanding ({0} students)", Model.Count)</div>
+            <div class="value text-danger">@Model.Sum(f => f.Balance).ToString("N0") <span class="fs-6">@T("EGP")</span></div>
+        </div>
+    </div></div>
+
+    <div class="table-wrap">
+        <table class="table table-hover table-sm align-middle">
+            <thead class="table-dark">
+                <tr><th>@T("Student")</th><th>@T("Program")</th><th>@T("Last payment")</th><th>@T("Term")</th><th class="text-end">@T("Balance")</th><th></th></tr>
+            </thead>
+            <tbody>
+                @foreach (var f in Model)
+                {
+                    <tr>
+                        <td>
+                            <a asp-controller="Students" asp-action="Details" asp-route-id="@f.StudentId">@f.Student?.FullName</a>
+                            <code class="small ms-1">@f.Student?.AdmissionNumber</code>
+                        </td>
+                        <td class="small">@f.Student?.Course?.Name</td>
+                        <td class="small">@Date(f.PaidOn) · @f.Amount.ToString("N0")</td>
+                        <td>@T(f.Term) @f.Year</td>
+                        <td class="text-end text-danger"><strong>@f.Balance.ToString("N2")</strong></td>
+                        <td class="text-end">
+                            <a asp-action="Create" asp-route-studentId="@f.StudentId" class="btn btn-sm btn-success">@T("Record payment")</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

@@ -1,0 +1,75 @@
+@model StudentManagement.Controllers.LoginViewModel
+@inject Microsoft.AspNetCore.Hosting.IWebHostEnvironment Env
+@{
+    ViewData["Title"] = T("Sign in");
+}
+
+<div class="login-wrap">
+    <div class="card login-card w-100">
+        <div class="row g-0">
+            <div class="col-lg-6 login-hero d-flex flex-column justify-content-center">
+                <div class="d-flex align-items-center gap-3 mb-4">
+                    <partial name="_Crest" />
+                    <div>
+                        <div class="fw-bold fs-4 text-white">@T(UniversityName)</div>
+                        <div class="small opacity-75">@T("Student Information System")</div>
+                    </div>
+                </div>
+                <h3 class="mb-2">@T("Welcome to the university portal")</h3>
+                <p class="opacity-75 mb-0">@T("One account for students, faculty and administration.")</p>
+                <div class="feature"><i class="bi bi-journal-check"></i><div>@T("Register for courses and build your weekly timetable.")</div></div>
+                <div class="feature"><i class="bi bi-graph-up-arrow"></i><div>@T("Follow your grades, GPA and academic standing.")</div></div>
+                <div class="feature"><i class="bi bi-people"></i><div>@T("Faculty manage rosters, attendance and grading in one place.")</div></div>
+            </div>
+            <div class="col-lg-6 bg-white p-4 p-md-5">
+                <h3 class="mb-1">@T("Sign in")</h3>
+                <p class="text-muted mb-4">@T("Use your university email and password.")</p>
+
+                <form asp-action="Login" method="post">
+                    <input type="hidden" asp-for="ReturnUrl" />
+                    <div asp-validation-summary="ModelOnly" class="text-danger small mb-2"></div>
+
+                    <div class="mb-3">
+                        <label asp-for="Email" class="form-label"></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                            <input asp-for="Email" class="form-control" autocomplete="username" dir="ltr" placeholder="name@university.edu" autofocus />
+                        </div>
+                        <span asp-validation-for="Email" class="text-danger small"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Password" class="form-label"></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                            <input asp-for="Password" class="form-control" autocomplete="current-password" dir="ltr" />
+                        </div>
+                        <span asp-validation-for="Password" class="text-danger small"></span>
+                    </div>
+                    <div class="form-check mb-4">
+                        <input asp-for="RememberMe" class="form-check-input" />
+                        <label asp-for="RememberMe" class="form-check-label"></label>
+                    </div>
+                    <button class="btn btn-primary w-100 py-2"><i class="bi bi-box-arrow-in-right"></i> @T("Sign in")</button>
+                </form>
+
+                @if (Env.IsDevelopment())
+                {
+                    <div class="border rounded-3 mt-4 small">
+                        <div class="px-3 py-2 bg-warning-subtle fw-semibold rounded-top-3"><i class="bi bi-cone-striped"></i> @T("Sample accounts (development only)")</div>
+                        <div class="table-responsive">
+                            <table class="table table-sm mb-0 align-middle">
+                                <tr><td class="text-nowrap">@T("Admin")</td><td dir="ltr"><code>admin@university.edu</code><br /><code>Admin@1234</code></td></tr>
+                                <tr><td class="text-nowrap">@T("Instructor")</td><td dir="ltr"><code>ahmed.hassan@university.edu</code><br /><code>Instructor@1234</code></td></tr>
+                                <tr><td class="text-nowrap">@T("Student")</td><td dir="ltr"><code>mariam.ali@student.university.edu</code><br /><code>Student@1234</code></td></tr>
+                            </table>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

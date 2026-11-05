@@ -1,0 +1,15 @@
+@model Room
+@{
+    ViewData["Title"] = T("New room");
+}
+
+<div class="page-head"><h2>@T("New room")</h2></div>
+<form asp-action="Create" method="post" class="form-card">
+    <partial name="_RoomForm" model="Model" />
+    <div class="mt-4 d-flex gap-2">
+        <button class="btn btn-primary"><i class="bi bi-check2"></i> @T("Create")</button>
+        <a asp-action="Index" class="btn btn-outline-secondary">@T("Cancel")</a>
+    </div>
+</form>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

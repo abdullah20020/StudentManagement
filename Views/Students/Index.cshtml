@@ -1,0 +1,75 @@
+@model IEnumerable<Student>
+@{
+    ViewData["Title"] = T("Students");
+    var list = Model.ToList();
+}
+
+<div class="page-head">
+    <div>
+        <h2>@T("Students")</h2>
+        <div class="sub">@T("{0} student(s)", list.Count)</div>
+    </div>
+    <a asp-action="Create" class="btn btn-primary"><i class="bi bi-person-plus"></i> @T("Add student")</a>
+</div>
+
+<form method="get" class="filter-bar row g-2">
+    <div class="col-md-6">
+        <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <input name="search" value="@ViewBag.Search" class="form-control" placeholder="@T("Search by name or student ID")" />
+        </div>
+    </div>
+    <div class="col-md-4">
+        <select name="courseId" class="form-select">
+            <option value="">@T("All programs")</option>
+            @foreach (var c in ViewBag.Courses)
+            {
+                <option value="@c.Id" selected="@(ViewBag.CourseId == c.Id)">@c.Name</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-2"><button class="btn btn-secondary w-100">@T("Filter")</button></div>
+</form>
+
+<div class="table-wrap">
+    <table class="table table-hover align-middle">
+        <thead class="table-dark">
+            <tr>
+                <th>@T("Student ID")</th>
+                <th>@T("Name")</th>
+                <th>@T("Program")</th>
+                <th>@T("Email")</th>
+                <th>@T("Enrolled")</th>
+                <th>@T("Status")</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var s in list)
+            {
+                <tr>
+                    <td><code>@s.AdmissionNumber</code></td>
+                    <td><a asp-action="Details" asp-route-id="@s.Id" class="fw-semibold">@s.FullName</a></td>
+                    <td class="small">@s.Course?.Name</td>
+                    <td class="small" dir="ltr">@s.Email</td>
+                    <td class="small">@Date(s.EnrollmentDate)</td>
+                    <td>
+                        @if (s.IsActive) { <span class="badge bg-success">@T("Active")</span> }
+                        else { <span class="badge bg-secondary">@T("Inactive")</span> }
+                    </td>
+                    <td class="text-end text-nowrap">
+                        <a asp-action="Details" asp-route-id="@s.Id" class="btn btn-sm btn-outline-primary" title="@T("View")"><i class="bi bi-eye"></i></a>
+                        <a asp-action="Edit" asp-route-id="@s.Id" class="btn btn-sm btn-outline-secondary" title="@T("Edit")"><i class="bi bi-pencil"></i></a>
+                        <form asp-action="Delete" asp-route-id="@s.Id" method="post" class="d-inline" data-confirm="@T("Delete this student and their login?")">
+                            <button class="btn btn-sm btn-outline-danger" title="@T("Delete")"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+@if (!list.Any())
+{
+    <p class="text-muted mt-3">@T("No students found.")</p>
+}

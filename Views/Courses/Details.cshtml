@@ -1,0 +1,156 @@
+@model Course
+@{
+    ViewData["Title"] = Model.Name;
+    var subjects = Model.Subjects.OrderBy(s => s.YearOfStudy).ThenBy(s => s.Semester).ThenBy(s => s.Code).ToList();
+}
+
+<div class="page-head">
+    <div>
+        <h2>@Model.Name</h2>
+        <div class="sub">
+            <code>@Model.Code</code> · @Model.Department?.Name
+            @if (!Model.IsActive) { <span class="badge bg-secondary ms-1">@T("Inactive")</span> }
+        </div>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary"><i class="bi bi-pencil"></i> @T("Edit")</a>
+        <form asp-action="Delete" asp-route-id="@Model.Id" method="post" data-confirm="@T("Delete this program and its subjects?")">
+            <button class="btn btn-outline-danger"><i class="bi bi-trash"></i> @T("Delete")</button>
+        </form>
+        <a asp-action="Index" class="btn btn-outline-secondary">@T("Back to list")</a>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-sm-4"><div class="card"><div class="card-body stat">
+        <div class="icon"><i class="bi bi-award"></i></div>
+        <div><div class="label">@T("Total credit hours")</div><div class="value">@Model.Credits</div></div>
+    </div></div></div>
+    <div class="col-sm-4"><div class="card"><div class="card-body stat">
+        <div class="icon gold"><i class="bi bi-hourglass-split"></i></div>
+        <div><div class="label">@T("Duration")</div><div class="value">@T("{0} years", Model.DurationYears)</div></div>
+    </div></div></div>
+    <div class="col-sm-4"><div class="card"><div class="card-body stat">
+        <div class="icon blue"><i class="bi bi-mortarboard"></i></div>
+        <div><div class="label">@T("Students")</div><div class="value">@Model.Students.Count</div></div>
+    </div></div></div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.Description))
+{
+    <p>@Model.Description</p>
+}
+
+<div class="card mb-3">
+    <div class="card-header"><i class="bi bi-journal-bookmark"></i> @T("Study plan (subjects)")</div>
+    @if (subjects.Any())
+    {
+        <div class="table-responsive">
+        <table class="table table-sm align-middle">
+            <thead>
+                <tr><th>@T("Code")</th><th>@T("Name")</th><th class="text-end">@T("Credits")</th><th>@T("Year")</th><th>@T("Semester")</th><th>@T("Prerequisites")</th><th></th></tr>
+            </thead>
+            <tbody>
+                @foreach (var s in subjects)
+                {
+                    var options = subjects.Where(o => o.Id != s.Id && s.Prerequisites.All(p => p.PrerequisiteId != o.Id)).ToList();
+                    <tr>
+                        <td><code>@s.Code</code></td>
+                        <td>@s.Name</td>
+                        <td class="text-end">@s.Credits</td>
+                        <td>@T("Year {0}", s.YearOfStudy)</td>
+                        <td>@T(s.Semester)</td>
+                        <td>
+                            <div class="d-flex flex-wrap gap-1 align-items-center">
+                                @foreach (var p in s.Prerequisites)
+                                {
+                                    <form asp-action="RemovePrerequisite" asp-route-id="@s.Id" asp-route-prerequisiteId="@p.PrerequisiteId" method="post" class="d-inline">
+                                        <span class="badge bg-light text-dark border">@p.Prerequisite?.Code
+                                            <button class="btn-close ms-1" style="font-size:.5rem" title="@T("Remove")"></button></span>
+                                    </form>
+                                }
+                                @if (options.Any())
+                                {
+                                    <form asp-action="AddPrerequisite" asp-route-id="@s.Id" method="post" class="d-inline">
+                                        <select name="prerequisiteId" class="form-select form-select-sm py-0" style="width:auto" onchange="if (this.value) this.form.submit()">
+                                            <option value="">+ @T("add")</option>
+                                            @foreach (var o in options) { <option value="@o.Id">@o.Code</option> }
+                                        </select>
+                                    </form>
+                                }
+                            </div>
+                        </td>
+                        <td class="text-end text-nowrap">
+                            <a asp-controller="Sections" asp-action="Create" asp-route-subjectId="@s.Id" class="btn btn-sm btn-outline-success" title="@T("Open a section of this subject")">+ @T("Section")</a>
+                            <a asp-controller="Grades" asp-action="Index" asp-route-subjectId="@s.Id" class="btn btn-sm btn-outline-primary">@T("Grades")</a>
+                            <form asp-action="DeleteSubject" asp-route-id="@s.Id" method="post" class="d-inline" data-confirm="@T("Remove this subject?")">
+                                <button class="btn btn-sm btn-outline-danger" title="@T("Remove")"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        </div>
+    }
+    else
+    {
+        <div class="card-body text-muted">@T("No subjects yet.")</div>
+    }
+
+    <div class="card-footer">
+        <form asp-action="AddSubject" asp-route-id="@Model.Id" method="post" class="row g-2 align-items-end">
+            <div class="col-md-2">
+                <label class="form-label small mb-1">@T("Code")</label>
+                <input name="Code" class="form-control form-control-sm" required maxlength="20" dir="ltr" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small mb-1">@T("Name")</label>
+                <input name="Name" class="form-control form-control-sm" required maxlength="200" />
+            </div>
+            <div class="col-md-1">
+                <label class="form-label small mb-1">@T("Credits")</label>
+                <input name="Credits" type="number" value="3" min="0" class="form-control form-control-sm" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small mb-1">@T("Year")</label>
+                <select name="YearOfStudy" class="form-select form-select-sm">
+                    @for (var y = 1; y <= Math.Max(1, Model.DurationYears); y++)
+                    {
+                        <option value="@y">@T("Year {0}", y)</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small mb-1">@T("Semester")</label>
+                <select name="Semester" class="form-select form-select-sm">
+                    <option value="Semester 1">@T("Semester 1")</option>
+                    <option value="Semester 2">@T("Semester 2")</option>
+                </select>
+            </div>
+            <div class="col-md-1">
+                <button class="btn btn-sm btn-success w-100" title="@T("Add")"><i class="bi bi-plus-lg"></i></button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header"><i class="bi bi-mortarboard"></i> @T("Students")</div>
+    @if (Model.Students.Any())
+    {
+        <ul class="list-group list-group-flush">
+            @foreach (var st in Model.Students.OrderBy(s => s.LastName))
+            {
+                <li class="list-group-item d-flex justify-content-between">
+                    <a asp-controller="Students" asp-action="Details" asp-route-id="@st.Id">@st.FullName</a>
+                    <code>@st.AdmissionNumber</code>
+                </li>
+            }
+        </ul>
+    }
+    else
+    {
+        <div class="card-body text-muted">@T("No students enrolled.")</div>
+    }
+</div>

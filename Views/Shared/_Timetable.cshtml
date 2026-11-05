@@ -1,0 +1,43 @@
+@model List<StudentManagement.Services.TimetableEntry>
+@* Weekly timetable, one column per teaching day (Saturday–Thursday). *@
+@{
+    string Kind(string? type) => type switch { "Lab" => "lab", "Tutorial" => "tutorial", _ => "" };
+}
+
+@if (!Model.Any())
+{
+    <p class="text-muted mb-0 p-2">@T("Nothing scheduled.")</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-bordered table-sm mb-0 timetable" style="table-layout:fixed; min-width:720px">
+            <thead>
+                <tr>
+                    @foreach (var day in SectionMeeting.TeachingDays)
+                    {
+                        <th class="text-center">@Day(day)</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    @foreach (var day in SectionMeeting.TeachingDays)
+                    {
+                        <td class="align-top p-1">
+                            @foreach (var e in Model.Where(x => x.Day == day).OrderBy(x => x.Start))
+                            {
+                                <div class="slot @Kind(e.Type)">
+                                    <div class="time" dir="ltr">@e.Start.ToString("HH:mm")–@e.End.ToString("HH:mm")</div>
+                                    <div>@e.Title <span class="text-muted">@T(e.Type ?? "")</span></div>
+                                    @if (e.Subtitle != null) { <div class="text-muted text-truncate">@e.Subtitle</div> }
+                                    @if (e.Room != null) { <div class="text-muted"><i class="bi bi-geo-alt"></i> @e.Room</div> }
+                                </div>
+                            }
+                        </td>
+                    }
+                </tr>
+            </tbody>
+        </table>
+    </div>
+}

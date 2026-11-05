@@ -1,0 +1,115 @@
+@{
+    ViewData["Title"] = T("Dashboard");
+    var term = ViewBag.Term as AcademicTerm;
+    var counts = (Dictionary<string, int>)ViewBag.Counts;
+    var notRegistered = (List<Student>)ViewBag.NotRegistered;
+    var probation = (List<Student>)ViewBag.Probation;
+    var cgpas = (Dictionary<int, decimal?>)ViewBag.Cgpas;
+    var owing = (List<FeePayment>)ViewBag.Owing;
+    var tiles = new Dictionary<string, (string Controller, string Icon)>
+    {
+        ["Faculties"] = ("Faculties", "bi-building"), ["Departments"] = ("Faculties", "bi-diagram-3"), ["Programs"] = ("Courses", "bi-journal-bookmark"),
+        ["Instructors"] = ("Instructors", "bi-person-badge"), ["Students"] = ("Students", "bi-mortarboard"), ["Rooms"] = ("Rooms", "bi-door-open"),
+    };
+}
+
+<div class="page-head">
+    <div>
+        <h2>@T("Administration dashboard")</h2>
+        <div class="sub">@T("Welcome back. Here is the state of the university today.")</div>
+    </div>
+    @if (term != null)
+    {
+        <div class="d-flex gap-2">
+            <a asp-controller="Sections" asp-action="Index" class="btn btn-outline-primary"><i class="bi bi-calendar-week"></i> @T("Schedule")</a>
+            <a asp-controller="Terms" asp-action="Index" class="btn btn-primary"><i class="bi bi-calendar-range"></i> @T(term.Season) @term.Year</a>
+        </div>
+    }
+</div>
+
+<div class="row g-3 mb-4">
+    @foreach (var (name, n) in counts)
+    {
+        <div class="col-6 col-md-4 col-xl-2">
+            <a asp-controller="@tiles[name].Controller" asp-action="Index" class="tile">
+                <div class="card"><div class="card-body stat">
+                    <div class="icon"><i class="bi @tiles[name].Icon"></i></div>
+                    <div><div class="value">@n</div><div class="label">@T(name)</div></div>
+                </div></div>
+            </a>
+        </div>
+    }
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4"><div class="card h-100"><div class="card-body stat">
+        <div class="icon blue"><i class="bi bi-calendar-week"></i></div>
+        <div>
+            <div class="label">@T("Sections this term")</div>
+            <div class="value"><a asp-controller="Sections" asp-action="Index" class="text-reset">@ViewBag.SectionCount</a></div>
+            @if ((int)ViewBag.Unscheduled > 0) { <div class="small text-danger">@T("{0} without a schedule", (int)ViewBag.Unscheduled)</div> }
+            @if ((int)ViewBag.NoInstructor > 0) { <div class="small text-danger">@T("{0} without an instructor", (int)ViewBag.NoInstructor)</div> }
+        </div>
+    </div></div></div>
+    <div class="col-md-4"><div class="card h-100"><div class="card-body stat">
+        <div class="icon gold"><i class="bi bi-journal-check"></i></div>
+        <div>
+            <div class="label">@T("Course registrations")</div>
+            <div class="value">@ViewBag.Registrations</div>
+            <div class="small text-muted">@T("{0} active student(s) not registered yet", notRegistered.Count)</div>
+        </div>
+    </div></div></div>
+    <div class="col-md-4"><div class="card h-100"><div class="card-body stat">
+        <div class="icon red"><i class="bi bi-cash-coin"></i></div>
+        <div>
+            <div class="label">@T("Outstanding fees")</div>
+            <div class="value text-danger">@owing.Sum(f => f.Balance).ToString("N0") <span class="fs-6">@T("EGP")</span></div>
+            <a asp-controller="Fees" asp-action="Outstanding" class="small">@T("{0} student(s) owing", owing.Count) @Arrow</a>
+        </div>
+    </div></div></div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header"><i class="bi bi-exclamation-triangle text-danger"></i> @T("Academic probation") <span class="text-muted small fw-normal">(@T("CGPA below {0}", Academic.ProbationBelow.ToString("0.0")))</span></div>
+            @if (probation.Any())
+            {
+                <ul class="list-group list-group-flush">
+                    @foreach (var s in probation)
+                    {
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span><a asp-controller="Students" asp-action="Details" asp-route-id="@s.Id">@s.FullName</a> <span class="small text-muted">@s.Course?.Code</span></span>
+                            <span class="text-danger fw-bold">@cgpas[s.Id]?.ToString("0.00")</span>
+                        </li>
+                    }
+                </ul>
+            }
+            else
+            {
+                <div class="card-body text-muted">@T("Nobody is on probation.")</div>
+            }
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header"><i class="bi bi-person-exclamation text-warning"></i> @T("Not registered for {0}", term == null ? "" : T(term.Season) + " " + term.Year)</div>
+            @if (notRegistered.Any())
+            {
+                <ul class="list-group list-group-flush">
+                    @foreach (var s in notRegistered)
+                    {
+                        <li class="list-group-item d-flex justify-content-between">
+                            <a asp-controller="Students" asp-action="Details" asp-route-id="@s.Id">@s.FullName</a>
+                            <a asp-controller="Registration" asp-action="Index" asp-route-studentId="@s.Id" class="small">@T("Register") @Arrow</a>
+                        </li>
+                    }
+                </ul>
+            }
+            else
+            {
+                <div class="card-body text-muted">@T("Every active student is registered.")</div>
+            }
+        </div>
+    </div>
+</div>

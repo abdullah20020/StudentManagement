@@ -1,0 +1,92 @@
+@model List<Section>
+@{
+    ViewData["Title"] = T("Sections & schedule");
+    var term = ViewBag.Term as AcademicTerm;
+    var enrolled = (Dictionary<int, int>)ViewBag.Enrolled;
+    var asTimetable = ViewBag.View == "timetable";
+}
+
+<div class="page-head">
+    <div>
+        <h2>@T("Sections & schedule")</h2>
+        <div class="sub">@term?.Name · @T("{0} section(s)", Model.Count)</div>
+    </div>
+    <a asp-action="Create" asp-route-termId="@term?.Id" class="btn btn-primary"><i class="bi bi-plus-lg"></i> @T("New section")</a>
+</div>
+
+<form method="get" class="filter-bar row g-2">
+    <div class="col-md-2">
+        <select name="termId" class="form-select">
+            @foreach (AcademicTerm t in ViewBag.Terms)
+            {
+                <option value="@t.Id" selected="@(term?.Id == t.Id)">@t.Name</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-3">
+        <select name="courseId" class="form-select">
+            <option value="">@T("All programs")</option>
+            @foreach (Course c in ViewBag.Courses)
+            {
+                <option value="@c.Id" selected="@(ViewBag.CourseId == c.Id)">@c.Name</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-3">
+        <select name="instructorId" class="form-select">
+            <option value="">@T("All instructors")</option>
+            @foreach (Instructor i in ViewBag.Instructors)
+            {
+                <option value="@i.Id" selected="@(ViewBag.InstructorId == i.Id)">@i.FullName</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-2">
+        <select name="view" class="form-select">
+            <option value="">@T("List")</option>
+            <option value="timetable" selected="@asTimetable">@T("Weekly timetable")</option>
+        </select>
+    </div>
+    <div class="col-md-2"><button class="btn btn-secondary w-100">@T("Show")</button></div>
+</form>
+
+@if (asTimetable)
+{
+    <div class="card"><div class="card-body p-2">
+        <partial name="_Timetable" model="(List<TimetableEntry>)ViewBag.Timetable" />
+    </div></div>
+}
+else if (!Model.Any())
+{
+    <p class="text-muted">@T("No sections for these filters.")</p>
+}
+else
+{
+    <div class="table-wrap">
+        <table class="table table-hover table-sm align-middle">
+            <thead class="table-dark">
+                <tr><th>@T("Section")</th><th>@T("Subject")</th><th class="text-end">@T("Cr.")</th><th>@T("Instructor")</th><th>@T("Schedule")</th><th class="text-end">@T("Enrolled")</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var s in Model)
+                {
+                    var n = enrolled.GetValueOrDefault(s.Id);
+                    <tr>
+                        <td class="text-nowrap"><a asp-action="Details" asp-route-id="@s.Id"><strong>@s.Subject?.Code-@s.Number</strong></a></td>
+                        <td>@s.Subject?.Name</td>
+                        <td class="text-end">@s.Subject?.Credits</td>
+                        <td class="small">@(s.Instructor?.FullName ?? "—")</td>
+                        <td class="small">
+                            @foreach (var m in s.Meetings.OrderBy(m => Array.IndexOf(SectionMeeting.TeachingDays, m.Day)).ThenBy(m => m.StartTime))
+                            {
+                                <div>@DayShort(m.Day) <span dir="ltr">@m.TimeRange</span> <span class="text-muted">@m.Room?.Code</span></div>
+                            }
+                            @if (!s.Meetings.Any()) { <span class="text-danger">@T("Not scheduled")</span> }
+                        </td>
+                        <td class="text-end"><span class="@(n >= s.Capacity ? "text-danger fw-bold" : "")">@n/@s.Capacity</span></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

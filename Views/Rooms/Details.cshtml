@@ -1,0 +1,27 @@
+@model Room
+@{
+    ViewData["Title"] = T("Room {0}", Model.Code);
+    var term = ViewBag.Term as AcademicTerm;
+}
+
+<div class="page-head">
+    <div>
+        <h2>@T("Room {0}", Model.Code)</h2>
+        <div class="sub">@Model.Building · @T(Model.Type) · @T("capacity {0}", Model.Capacity)</div>
+    </div>
+    <div class="d-flex gap-2">
+        <form method="get">
+            <select name="termId" class="form-select" onchange="this.form.submit()">
+                @foreach (AcademicTerm t in ViewBag.Terms)
+                {
+                    <option value="@t.Id" selected="@(term?.Id == t.Id)">@t.Name</option>
+                }
+            </select>
+        </form>
+        <a asp-action="Index" class="btn btn-outline-secondary">@T("Back")</a>
+    </div>
+</div>
+
+<div class="card"><div class="card-body p-2">
+    <partial name="_Timetable" model="(List<TimetableEntry>)ViewBag.Timetable" />
+</div></div>

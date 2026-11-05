@@ -1,0 +1,18 @@
+@model Section
+@{
+    ViewData["Title"] = T("New section");
+}
+
+<div class="page-head">
+    <div>
+        <h2>@T("New section")</h2>
+        <div class="sub">@T("After creating it, add its weekly meetings.")</div>
+    </div>
+</div>
+<form asp-action="Create" method="post" class="form-card">
+    <partial name="_SectionForm" model="Model" />
+    <div class="mt-4 d-flex gap-2">
+        <button class="btn btn-primary"><i class="bi bi-check2"></i> @T("Create")</button>
+        <a asp-action="Index" class="btn btn-outline-secondary">@T("Cancel")</a>
+    </div>
+</form>

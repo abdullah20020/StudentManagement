@@ -1,0 +1,29 @@
+@model Section
+
+<div asp-validation-summary="All" class="alert alert-danger" style="display:@(ViewData.ModelState.IsValid ? "none" : "block")"></div>
+<div class="row g-3">
+    <div class="col-md-6">
+        <label asp-for="SubjectId" class="form-label"></label>
+        <select asp-for="SubjectId" asp-items="ViewBag.Subjects" class="form-select">
+            <option value="0">@T("-- Select subject --")</option>
+        </select>
+    </div>
+    <div class="col-md-3">
+        <label asp-for="TermId" class="form-label"></label>
+        <select asp-for="TermId" asp-items="ViewBag.Terms" class="form-select"></select>
+    </div>
+    <div class="col-md-3">
+        <label asp-for="Number" class="form-label"></label>
+        <input asp-for="Number" class="form-control" dir="ltr" />
+    </div>
+    <div class="col-md-6">
+        <label asp-for="InstructorId" class="form-label"></label>
+        <select asp-for="InstructorId" asp-items="ViewBag.Instructors" class="form-select">
+            <option value="">@T("-- Not assigned yet --")</option>
+        </select>
+    </div>
+    <div class="col-md-3">
+        <label asp-for="Capacity" class="form-label"></label>
+        <input asp-for="Capacity" type="number" class="form-control" />
+    </div>
+</div>
